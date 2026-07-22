@@ -29,7 +29,6 @@ export default function StudyTracker() {
   const [manualCourse, setManualCourse] = useState(coursesList[0] || '');
   const [manualMinutes, setManualMinutes] = useState('');
 
-  // 🔴 NEW STATES FOR TASKS
   const [completedTasksData, setCompletedTasksData] = useState({});
   const [currentTasks, setCurrentTasks] = useState(() => {
     const saved = localStorage.getItem('studyTasks');
@@ -37,7 +36,7 @@ export default function StudyTracker() {
   });
   const [newTaskInputStr, setNewTaskInputStr] = useState('');
 
-  // 1. GET DATA (Ab tasks bhi fetch honge)
+  // 1. GET DATA
   useEffect(() => {
     fetch(BACKEND_URL)
       .then(res => res.json())
@@ -69,7 +68,6 @@ export default function StudyTracker() {
     if (!coursesList.includes(manualCourse) && coursesList.length > 0) setManualCourse(coursesList[0]);
   }, [coursesList, selectedCourse, manualCourse]);
 
-  // Save current tasks to LocalStorage so they don't disappear on refresh
   useEffect(() => {
     localStorage.setItem('studyTasks', JSON.stringify(currentTasks));
   }, [currentTasks]);
@@ -181,7 +179,6 @@ export default function StudyTracker() {
     }
   };
 
-  // 🔴 NEW FUNCTIONS FOR TASKS
   const handleAddNewTask = () => {
     if (newTaskInputStr.trim()) {
       setCurrentTasks([...currentTasks, newTaskInputStr.trim()]);
@@ -191,16 +188,12 @@ export default function StudyTracker() {
 
   const handleCompleteTask = async (taskText) => {
     const today = getTodayDate();
-    
-    // Remove from ongoing list
     setCurrentTasks(currentTasks.filter(t => t !== taskText));
     
-    // Add to completed list
     setCompletedTasksData(prev => {
       const todayTasks = prev[today] || [];
       const newTasksList = [...todayTasks, taskText];
       
-      // Save to Cloud DB
       fetch(BACKEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -250,14 +243,43 @@ export default function StudyTracker() {
   coursesList.forEach(c => overallTotals[c] = 0);
   Object.values(dailyData).forEach((dayRecord) => {
     Object.keys(dayRecord).forEach((course) => {
-      if (overallTotals[course] !== undefined) overallTotals[course] += dayRecord[course];
-      else overallTotals[course] = dayRecord[course];
+      if (overallTotals[course] !== newdataKeys[course]) overallTotals[course] = (overallTotals[course] || 0) + dayRecord[course];
     });
   });
 
   const pieChartData = Object.keys(overallTotals)
     .map((course) => ({ name: course, value: overallTotals[course] }))
     .filter((data) => data.value > 0);
+
+  // 🔴 HELPER TO GENERATE LAST 30 DAYS FOR GITHUB STREAK CALENDAR
+  const getLast30Days = () => {
+    const dates = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dates.push(d.toLocaleDateString('en-GB'));
+    }
+    return dates;
+  };
+
+  // 🔴 FUNCTION TO DETERMINE COLOR BASED ON HOURS STUDIED (< 4 hrs = Red, >=4 = Bronze, >=6 = Silver, >=8 = Gold)
+  const getDayColorStyle = (dateStr) => {
+    const dayRecord = dailyData[dateStr];
+    if (!dayRecord) return { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }; // Inactive (No fill)
+
+    const totalMins = Object.values(dayRecord).reduce((a, b) => a + b, 0);
+    const hrs = totalMins / 60;
+
+    if (hrs < 4) {
+      return { background: '#ff4444', boxShadow: '0 0 10px rgba(255, 68, 68, 0.4)', border: '1px solid #ff6666' }; // Red (< 4 hrs)
+    } else if (hrs >= 4 && hrs < 6) {
+      return { background: '#cd7f32', boxShadow: '0 0 10px rgba(205, 127, 50, 0.4)', border: '1px solid #e09f5b' }; // Bronze
+    } else if (hrs >= 6 && hrs < 8) {
+      return { background: '#c0c0c0', boxShadow: '0 0 10px rgba(192, 192, 192, 0.4)', border: '1px solid #dcdcdc' }; // Silver
+    } else {
+      return { background: '#ffd700', boxShadow: '0 0 12px rgba(255, 215, 0, 0.6)', border: '1px solid #ffea75' }; // Gold (>= 8 hrs)
+    }
+  };
 
   if (showHistory) {
     return (
@@ -296,7 +318,6 @@ export default function StudyTracker() {
                         ) : null
                       )}
                     </td>
-                    {/* 🔴 NAYA COLUMN HISTORY ME */}
                     <td>
                       {completedTasksData[date] && completedTasksData[date].length > 0 ? (
                         <ul style={{ paddingLeft: '15px', margin: 0, color: '#00ffcc', fontSize: '13px' }}>
@@ -380,7 +401,7 @@ export default function StudyTracker() {
           </div>
         </div>
 
-        {/* 🔴 NAYA SECTION: Tasks for the Day */}
+        {/* TASKS CARD */}
         <div className="stats-container" style={{ alignSelf: 'flex-start' }}>
           <h2>Tasks for the Day</h2>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
@@ -398,16 +419,8 @@ export default function StudyTracker() {
               <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.05)', padding: '10px', marginBottom: '5px', borderRadius: '6px' }}>
                 <span style={{ fontSize: '15px' }}>{t}</span>
                 <div style={{ display: 'flex', gap: '5px' }}>
-                  <button 
-                    onClick={() => handleCompleteTask(t)} 
-                    style={{ background: 'transparent', color: '#00ffcc', border: '2px solid #00ffcc', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}
-                    title="Mark as Completed"
-                  >✓</button>
-                  <button 
-                    onClick={() => handleRemoveTask(t)} 
-                    style={{ background: 'transparent', color: '#ff4444', border: '2px solid #ff4444', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}
-                    title="Delete Task"
-                  >✕</button>
+                  <button onClick={() => handleCompleteTask(t)} style={{ background: 'transparent', color: '#00ffcc', border: '2px solid #00ffcc', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}>✓</button>
+                  <button onClick={() => handleRemoveTask(t)} style={{ background: 'transparent', color: '#ff4444', border: '2px solid #ff4444', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}>✕</button>
                 </div>
               </li>
             ))}
@@ -416,7 +429,6 @@ export default function StudyTracker() {
             )}
           </ul>
 
-          {/* Completed Tasks Log for Today */}
           {completedTasksData[today] && completedTasksData[today].length > 0 && (
             <div style={{ marginTop: '25px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
               <h4 style={{ color: '#00ffcc', marginBottom: '10px', fontSize: '14px' }}>✓ Completed Today:</h4>
@@ -432,8 +444,54 @@ export default function StudyTracker() {
         </div>
       </div>
 
+      {/* 🔴 NAYA SECTION: GitHub Style Study Streak & Heatmap Calendar */}
+      <div className="graph-card" style={{ width: '100%', maxWidth: '1150px' }}>
+        <h3>🔥 Study Streak & Activity Heatmap (Last 30 Days)</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', padding: '15px 0' }}>
+          {getLast30Days().map((dateStr) => {
+            const style = getDayColorStyle(dateStr);
+            const record = dailyData[dateStr];
+            const totalMins = record ? Object.values(record).reduce((a, b) => a + b, 0) : 0;
+            const hrsText = formatMinutesToHrMin(totalMins);
+
+            return (
+              <div 
+                key={dateStr}
+                title={`${dateStr}: ${hrsText}`}
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease',
+                  ...style
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.15)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <span style={{ color: totalMins > 0 ? '#000' : '#64748b' }}>{dateStr.split('/')[0]}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Color Legend Guide */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '15px', flexWrap: 'wrap', fontSize: '12px', color: '#94a3b8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px' }}></div> Inactive</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#ff4444', borderRadius: '3px' }}></div> &lt; 4 Hours (Red)</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#cd7f32', borderRadius: '3px' }}></div> Bronze (4-6h)</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#c0c0c0', borderRadius: '3px' }}></div> Silver (6-8h)</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#ffd700', borderRadius: '3px' }}></div> Gold (8h+)</div>
+        </div>
+      </div>
+
       <div className="graphs-section">
-        {/* ... Graphs (Same as before) ... */}
         <div className="graph-card">
           <h3>Daily Total Study Hours</h3>
           <div style={{ width: '100%', height: 300 }}>
