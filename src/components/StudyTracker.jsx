@@ -11,6 +11,9 @@ const getTodayDate = () => new Date().toLocaleDateString('en-GB');
 const BACKEND_URL = 'https://my-study-backend.onrender.com/api/study-data';
 
 export default function StudyTracker() {
+  // 🔥 Get logged-in user email
+  const userEmail = localStorage.getItem('userEmail');
+
   const [coursesList, setCoursesList] = useState(() => {
     const saved = localStorage.getItem('studyTrackerCourses');
     return saved ? JSON.parse(saved) : ['Communication', 'CS Fundamentals', 'DEV', 'DSA', 'Extras', 'AI'];
@@ -44,8 +47,14 @@ export default function StudyTracker() {
 
   const availableYears = [2026, 2025, 2024, 2023, 2022];
 
+  // 🔥 Fetch only this user's data
   useEffect(() => {
-    fetch(BACKEND_URL)
+    if (!userEmail) {
+      setIsLoading(false);
+      return;
+    }
+
+    fetch(`${BACKEND_URL}?email=${userEmail}`)
       .then(res => res.json())
       .then(dbData => {
         const formattedData = {};
@@ -59,7 +68,7 @@ export default function StudyTracker() {
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
-  }, []);
+  }, [userEmail]);
 
   useEffect(() => {
     let timer;
@@ -75,7 +84,10 @@ export default function StudyTracker() {
     localStorage.setItem('studyTasks', JSON.stringify(currentTasks));
   }, [currentTasks]);
 
+  // 🔥 Save with email
   const saveTimeToCloud = async (courseName, minutesToAdd) => {
+    if (!userEmail) return;
+
     const dateToUse = selectedDate;
     let updatedTodayData = {};
 
@@ -95,7 +107,11 @@ export default function StudyTracker() {
       await fetch(BACKEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: dateToUse, coursesData: updatedTodayData })
+        body: JSON.stringify({
+          email: userEmail,
+          date: dateToUse,
+          coursesData: updatedTodayData
+        })
       });
     } catch (e) {
       console.error(e);
@@ -128,7 +144,10 @@ export default function StudyTracker() {
     }
   };
 
+  // 🔥 Complete task with email
   const handleCompleteTask = (taskText) => {
+    if (!userEmail) return;
+
     const dateToUse = selectedDate;
     setCurrentTasks(prev => prev.filter(t => t !== taskText));
 
@@ -137,15 +156,24 @@ export default function StudyTracker() {
       fetch(BACKEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: dateToUse, completedTasks: list })
+        body: JSON.stringify({
+          email: userEmail,
+          date: dateToUse,
+          completedTasks: list
+        })
       });
       return { ...prev, [dateToUse]: list };
     });
   };
 
+  // 🔥 Delete only this user's data
   const handleDeleteAllData = async () => {
+    if (!userEmail) return;
+
     try {
-      const res = await fetch(`${BACKEND_URL}/all`, { method: 'DELETE' });
+      const res = await fetch(`${BACKEND_URL}/all?email=${userEmail}`, {
+        method: 'DELETE'
+      });
       if (!res.ok) throw new Error('Delete failed');
       setDailyData({});
       setCompletedTasksData({});
@@ -181,6 +209,22 @@ export default function StudyTracker() {
     const [y, m, d] = iso.split('-');
     return `${d}/${m}/${y}`;
   };
+
+  // Safety check
+  if (!userEmail) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        color: '#ff6b6b',
+        fontSize: '20px'
+      }}>
+        Please login again
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -240,29 +284,6 @@ export default function StudyTracker() {
   const pieChartData = Object.keys(overallTotals)
     .map(c => ({ name: c, value: overallTotals[c] }))
     .filter(d => d.value > 0);
-
-  const getMonthsData = (year) => {
-    const months = [];
-    for (let m = 0; m < 12; m++) {
-      const date = new Date(year, m, 1);
-      const monthName = date.toLocaleString('en-US', { month: 'short' });
-      const weeks = [];
-      let currentWeek = new Array(7).fill(null);
-
-      while (date.getMonth() === m) {
-        const dayOfWeek = date.getDay();
-        currentWeek[dayOfWeek] = new Date(date);
-        if (dayOfWeek === 6) {
-          weeks.push(currentWeek);
-          currentWeek = new Array(7).fill(null);
-        }
-        date.setDate(date.getDate() + 1);
-      }
-      if (currentWeek.some(d => d !== null)) weeks.push(currentWeek);
-      months.push({ monthName, weeks });
-    }
-    return months;
-  };
 
   const getDayColorStyle = (dateStr) => {
     const dayRecord = dailyData[dateStr];
@@ -518,13 +539,13 @@ export default function StudyTracker() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN - Increased width */}
+        {/* RIGHT COLUMN */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           gap: '22px',
           width: '100%',
-          maxWidth: '480px'          // ← increased
+          maxWidth: '480px'
         }}>
           {/* Today's Medal */}
           <div
@@ -606,217 +627,211 @@ export default function StudyTracker() {
         </div>
       </div>
 
-{/* ==================== HEATMAP (GitHub Style Continuous) ==================== */}
-<div className="graph-card heatmap-card">
-  <div style={{
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    marginBottom: '22px',
-    flexWrap: 'wrap'
-  }}>
-    <select
-      className="year-select"
-      value={selectedYear}
-      onChange={e => setSelectedYear(Number(e.target.value))}
-    >
-      {availableYears.map(y => (
-        <option key={y} value={y}>{y}</option>
-      ))}
-    </select>
+      {/* ==================== HEATMAP ==================== */}
+      <div className="graph-card heatmap-card">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '22px',
+          flexWrap: 'wrap'
+        }}>
+          <select
+            className="year-select"
+            value={selectedYear}
+            onChange={e => setSelectedYear(Number(e.target.value))}
+          >
+            {availableYears.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
 
-    <button className="secondary-btn heatmap-btn">
-      Total Hrs : {yearlyHours}
-    </button>
+          <button className="secondary-btn heatmap-btn">
+            Total Hrs : {yearlyHours}
+          </button>
 
-    <div style={{ position: 'relative' }}>
-      <button
-        className="primary-btn heatmap-btn"
-        onClick={() => {
-          setShowMedalsDropdown(!showMedalsDropdown);
-          setShowInfoDropdown(false);
-        }}
-      >
-        Medals ▾
-      </button>
-      {showMedalsDropdown && (
-        <div className="dropdown-panel">
-          <div className="dropdown-title">Medals Won in {selectedYear}</div>
-          <div className="medal-row"><span>💎 Diamond</span><strong>{medalCounts.diamond}</strong></div>
-          <div className="medal-row"><span>🥇 Gold</span><strong>{medalCounts.gold}</strong></div>
-          <div className="medal-row"><span>🥈 Silver</span><strong>{medalCounts.silver}</strong></div>
-          <div className="medal-row"><span>🥉 Bronze</span><strong>{medalCounts.bronze}</strong></div>
-        </div>
-      )}
-    </div>
-
-    <div style={{ position: 'relative' }}>
-      <button
-        className="info-btn"
-        onClick={() => {
-          setShowInfoDropdown(!showInfoDropdown);
-          setShowMedalsDropdown(false);
-        }}
-        title="Color Legend"
-      >
-        ℹ️
-      </button>
-      {showInfoDropdown && (
-        <div className="dropdown-panel" style={{ minWidth: '220px' }}>
-          <div className="dropdown-title">Color Legend</div>
-          <div className="legend-item">
-            <div className="legend-dot" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.15)' }}></div>
-            Empty (no study)
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot" style={{ background: '#ff5555' }}></div>
-            &lt; 4 Hours
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot" style={{ background: '#cd7f32' }}></div>
-            Bronze (4–6 hrs)
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot" style={{ background: '#c0c0c0' }}></div>
-            Silver (6–8 hrs)
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot" style={{ background: '#ffd700' }}></div>
-            Gold (8–10 hrs)
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot" style={{ background: '#b9f2ff' }}></div>
-            Diamond (10+ hrs)
-          </div>
-        </div>
-      )}
-    </div>
-  </div>
-
-  {/* Continuous GitHub-style heatmap */}
-  {(() => {
-    // Build continuous weeks for the selected year
-    const year = selectedYear;
-    const firstDay = new Date(year, 0, 1);
-    const lastDay = new Date(year, 11, 31);
-
-    // Start from the Sunday before or on Jan 1
-    const start = new Date(firstDay);
-    start.setDate(start.getDate() - start.getDay());
-
-    const weeks = [];
-    let current = new Date(start);
-
-    while (current <= lastDay || current.getDay() !== 0) {
-      const week = [];
-      for (let i = 0; i < 7; i++) {
-        week.push(new Date(current));
-        current.setDate(current.getDate() + 1);
-      }
-      weeks.push(week);
-      if (current > lastDay && current.getDay() === 0) break;
-    }
-
-    // Month labels positions
-    const monthLabels = [];
-    let lastMonth = -1;
-    weeks.forEach((week, weekIndex) => {
-      week.forEach(day => {
-        if (day.getFullYear() === year) {
-          const m = day.getMonth();
-          if (m !== lastMonth) {
-            monthLabels.push({
-              month: day.toLocaleString('en-US', { month: 'short' }),
-              weekIndex
-            });
-            lastMonth = m;
-          }
-        }
-      });
-    });
-
-    return (
-      <div style={{ overflowX: 'auto', paddingBottom: '8px' }}>
-        {/* Month labels */}
-        <div style={{ display: 'flex', marginLeft: '32px', marginBottom: '6px', position: 'relative', height: '18px' }}>
-          {monthLabels.map((label, i) => (
-            <div
-              key={i}
-              style={{
-                position: 'absolute',
-                left: `${label.weekIndex * 15}px`,
-                fontSize: '11px',
-                color: '#94a3b8',
-                whiteSpace: 'nowrap'
+          <div style={{ position: 'relative' }}>
+            <button
+              className="primary-btn heatmap-btn"
+              onClick={() => {
+                setShowMedalsDropdown(!showMedalsDropdown);
+                setShowInfoDropdown(false);
               }}
             >
-              {label.month}
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', gap: '3px' }}>
-          {/* Day labels */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '3px',
-            marginRight: '6px',
-            fontSize: '10px',
-            color: '#94a3b8',
-            paddingTop: '2px'
-          }}>
-            <div style={{ height: '12px' }}></div>
-            <div style={{ height: '12px', lineHeight: '12px' }}>Mon</div>
-            <div style={{ height: '12px' }}></div>
-            <div style={{ height: '12px', lineHeight: '12px' }}>Wed</div>
-            <div style={{ height: '12px' }}></div>
-            <div style={{ height: '12px', lineHeight: '12px' }}>Fri</div>
-            <div style={{ height: '12px' }}></div>
-          </div>
-
-          {/* Continuous weeks */}
-          <div style={{ display: 'flex', gap: '3px' }}>
-            {weeks.map((week, wIndex) => (
-              <div key={wIndex} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                {week.map((day, dIndex) => {
-                  const isCurrentYear = day.getFullYear() === year;
-                  if (!isCurrentYear) {
-                    return <div key={dIndex} style={{ width: '12px', height: '12px' }}></div>;
-                  }
-
-                  const dateStr = day.toLocaleDateString('en-GB');
-                  const style = getDayColorStyle(dateStr);
-                  const mins = dailyData[dateStr]
-                    ? Object.values(dailyData[dateStr]).reduce((a, b) => a + b, 0)
-                    : 0;
-
-                  return (
-                    <div
-                      key={dIndex}
-                      title={`${dateStr}: ${formatMinutesToHrMin(mins)}`}
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '2px',
-                        cursor: 'pointer',
-                        transition: 'transform 0.15s',
-                        ...style
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.35)')}
-                      onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-                      onClick={() => setSelectedDate(dateStr)}
-                    />
-                  );
-                })}
+              Medals ▾
+            </button>
+            {showMedalsDropdown && (
+              <div className="dropdown-panel">
+                <div className="dropdown-title">Medals Won in {selectedYear}</div>
+                <div className="medal-row"><span>💎 Diamond</span><strong>{medalCounts.diamond}</strong></div>
+                <div className="medal-row"><span>🥇 Gold</span><strong>{medalCounts.gold}</strong></div>
+                <div className="medal-row"><span>🥈 Silver</span><strong>{medalCounts.silver}</strong></div>
+                <div className="medal-row"><span>🥉 Bronze</span><strong>{medalCounts.bronze}</strong></div>
               </div>
-            ))}
+            )}
+          </div>
+
+          <div style={{ position: 'relative' }}>
+            <button
+              className="info-btn"
+              onClick={() => {
+                setShowInfoDropdown(!showInfoDropdown);
+                setShowMedalsDropdown(false);
+              }}
+              title="Color Legend"
+            >
+              ℹ️
+            </button>
+            {showInfoDropdown && (
+              <div className="dropdown-panel" style={{ minWidth: '220px' }}>
+                <div className="dropdown-title">Color Legend</div>
+                <div className="legend-item">
+                  <div className="legend-dot" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.15)' }}></div>
+                  Empty (no study)
+                </div>
+                <div className="legend-item">
+                  <div className="legend-dot" style={{ background: '#ff5555' }}></div>
+                  &lt; 4 Hours
+                </div>
+                <div className="legend-item">
+                  <div className="legend-dot" style={{ background: '#cd7f32' }}></div>
+                  Bronze (4–6 hrs)
+                </div>
+                <div className="legend-item">
+                  <div className="legend-dot" style={{ background: '#c0c0c0' }}></div>
+                  Silver (6–8 hrs)
+                </div>
+                <div className="legend-item">
+                  <div className="legend-dot" style={{ background: '#ffd700' }}></div>
+                  Gold (8–10 hrs)
+                </div>
+                <div className="legend-item">
+                  <div className="legend-dot" style={{ background: '#b9f2ff' }}></div>
+                  Diamond (10+ hrs)
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Continuous GitHub-style heatmap */}
+        {(() => {
+          const year = selectedYear;
+          const firstDay = new Date(year, 0, 1);
+          const lastDay = new Date(year, 11, 31);
+
+          const start = new Date(firstDay);
+          start.setDate(start.getDate() - start.getDay());
+
+          const weeks = [];
+          let current = new Date(start);
+
+          while (current <= lastDay || current.getDay() !== 0) {
+            const week = [];
+            for (let i = 0; i < 7; i++) {
+              week.push(new Date(current));
+              current.setDate(current.getDate() + 1);
+            }
+            weeks.push(week);
+            if (current > lastDay && current.getDay() === 0) break;
+          }
+
+          const monthLabels = [];
+          let lastMonth = -1;
+          weeks.forEach((week, weekIndex) => {
+            week.forEach(day => {
+              if (day.getFullYear() === year) {
+                const m = day.getMonth();
+                if (m !== lastMonth) {
+                  monthLabels.push({
+                    month: day.toLocaleString('en-US', { month: 'short' }),
+                    weekIndex
+                  });
+                  lastMonth = m;
+                }
+              }
+            });
+          });
+
+          return (
+            <div style={{ overflowX: 'auto', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', marginLeft: '32px', marginBottom: '6px', position: 'relative', height: '18px' }}>
+                {monthLabels.map((label, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      position: 'absolute',
+                      left: `${label.weekIndex * 15}px`,
+                      fontSize: '11px',
+                      color: '#94a3b8',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {label.month}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '3px' }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '3px',
+                  marginRight: '6px',
+                  fontSize: '10px',
+                  color: '#94a3b8',
+                  paddingTop: '2px'
+                }}>
+                  <div style={{ height: '12px' }}></div>
+                  <div style={{ height: '12px', lineHeight: '12px' }}>Mon</div>
+                  <div style={{ height: '12px' }}></div>
+                  <div style={{ height: '12px', lineHeight: '12px' }}>Wed</div>
+                  <div style={{ height: '12px' }}></div>
+                  <div style={{ height: '12px', lineHeight: '12px' }}>Fri</div>
+                  <div style={{ height: '12px' }}></div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '3px' }}>
+                  {weeks.map((week, wIndex) => (
+                    <div key={wIndex} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      {week.map((day, dIndex) => {
+                        const isCurrentYear = day.getFullYear() === year;
+                        if (!isCurrentYear) {
+                          return <div key={dIndex} style={{ width: '12px', height: '12px' }}></div>;
+                        }
+
+                        const dateStr = day.toLocaleDateString('en-GB');
+                        const style = getDayColorStyle(dateStr);
+                        const mins = dailyData[dateStr]
+                          ? Object.values(dailyData[dateStr]).reduce((a, b) => a + b, 0)
+                          : 0;
+
+                        return (
+                          <div
+                            key={dIndex}
+                            title={`${dateStr}: ${formatMinutesToHrMin(mins)}`}
+                            style={{
+                              width: '12px',
+                              height: '12px',
+                              borderRadius: '2px',
+                              cursor: 'pointer',
+                              transition: 'transform 0.15s',
+                              ...style
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.35)')}
+                            onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                            onClick={() => setSelectedDate(dateStr)}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
-    );
-  })()}
-</div>
 
       {/* Charts */}
       <div className="graphs-section">
@@ -853,7 +868,7 @@ export default function StudyTracker() {
         </div>
       </div>
 
-      {/* Medal Modal - more breathing space */}
+      {/* Medal Modal */}
       {showMedalModal && (
         <div className="modal-overlay" onClick={() => setShowMedalModal(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
