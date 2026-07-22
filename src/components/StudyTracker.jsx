@@ -10,8 +10,8 @@ const getTodayDate = () => {
   return new Date().toLocaleDateString('en-GB');
 };
 
-// 🔴 YAHAN APNA RENDER WALA API URL PASTE KARO 🔴
-const BACKEND_URL = 'https://YOUR-RENDER-URL.onrender.com/api/study-data'; 
+
+const BACKEND_URL = 'https://my-study-backend.onrender.com/api/study-data'; 
 
 export default function StudyTracker() {
   const [coursesList, setCoursesList] = useState(() => {
@@ -24,8 +24,11 @@ export default function StudyTracker() {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-
   const [dailyData, setDailyData] = useState({});
+
+  // 🔴 Manual Entry States
+  const [manualCourse, setManualCourse] = useState(coursesList[0] || '');
+  const [manualMinutes, setManualMinutes] = useState('');
 
   // 1. GET DATA
   useEffect(() => {
@@ -55,7 +58,11 @@ export default function StudyTracker() {
     if (!coursesList.includes(selectedCourse) && coursesList.length > 0) {
       setSelectedCourse(coursesList[0]);
     }
-  }, [coursesList, selectedCourse]);
+    // Sync manual course dropdown as well
+    if (!coursesList.includes(manualCourse) && coursesList.length > 0) {
+      setManualCourse(coursesList[0]);
+    }
+  }, [coursesList, selectedCourse, manualCourse]);
 
   const handleAddCourse = () => {
     if (newCourseInput.trim() !== '' && !coursesList.includes(newCourseInput.trim())) {
@@ -90,46 +97,66 @@ export default function StudyTracker() {
     }
   };
 
-  // 2. POST DATA (Save Session)
+  // 2. POST DATA (Save Session - Auto)
   const endSession = async () => {
     setIsRunning(false);
     const minutesStudied = Math.ceil(time / 60);
 
     if (minutesStudied > 0 && selectedCourse) {
-      const today = getTodayDate();
-      let updatedTodayData = {};
-
-      setDailyData((prevData) => {
-        const todayData = prevData[today] || {};
-        coursesList.forEach(c => {
-            if(todayData[c] === undefined) todayData[c] = 0;
-        });
-
-        updatedTodayData = {
-          ...todayData,
-          [selectedCourse]: (todayData[selectedCourse] || 0) + minutesStudied
-        };
-
-        return { ...prevData, [today]: updatedTodayData };
-      });
-
-      try {
-        const response = await fetch(BACKEND_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: today, coursesData: updatedTodayData })
-        });
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        alert(`Success! ${minutesStudied} minutes added to Cloud DB.`);
-      } catch (error) {
-        alert("Error saving to database! Check console.");
-        console.error("Save error:", error);
-      }
+      saveTimeToCloud(selectedCourse, minutesStudied);
     }
     setTime(0);
   };
 
-  // 🔴 NAYA FUNCTION: Edit History
+  // 🔴 NAYA FUNCTION: Manual Entry Submit
+  const handleManualSubmit = () => {
+    const mins = parseInt(manualMinutes, 10);
+    if (isNaN(mins) || mins <= 0) {
+      alert("Please enter valid minutes (greater than 0).");
+      return;
+    }
+    if (!manualCourse) {
+      alert("Please select a course.");
+      return;
+    }
+    
+    saveTimeToCloud(manualCourse, mins);
+    setManualMinutes(''); // Input khali karne ke liye
+  };
+
+  // Helper Function for Cloud Save (Dono Timer aur Manual ise use karenge)
+  const saveTimeToCloud = async (courseName, minutesToAdd) => {
+    const today = getTodayDate();
+    let updatedTodayData = {};
+
+    setDailyData((prevData) => {
+      const todayData = prevData[today] || {};
+      coursesList.forEach(c => {
+          if(todayData[c] === undefined) todayData[c] = 0;
+      });
+
+      updatedTodayData = {
+        ...todayData,
+        [courseName]: (todayData[courseName] || 0) + minutesToAdd
+      };
+
+      return { ...prevData, [today]: updatedTodayData };
+    });
+
+    try {
+      const response = await fetch(BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: today, coursesData: updatedTodayData })
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      alert(`Success! ${minutesToAdd} minutes added to ${courseName}.`);
+    } catch (error) {
+      alert("Error saving to database! Check console.");
+      console.error("Save error:", error);
+    }
+  };
+
   const handleEditHistory = async (date, course, currentMins) => {
     const newMins = window.prompt(`Edit total minutes for '${course}' on ${date}:`, currentMins);
     
@@ -137,43 +164,34 @@ export default function StudyTracker() {
       const updatedMins = Number(newMins);
       const updatedData = { ...dailyData };
       
-      // Update data locally
       updatedData[date] = { ...updatedData[date], [course]: updatedMins };
       setDailyData(updatedData);
 
-      // Save updated data to cloud
       try {
         await fetch(BACKEND_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ date: date, coursesData: updatedData[date] })
         });
-      } catch (error) {
-        console.error("Error updating record:", error);
-      }
+      } catch (error) { console.error("Error updating record:", error); }
     }
   };
 
-  // 🔴 NAYA FUNCTION: Delete History
   const handleDeleteHistory = async (date, course) => {
     if (window.confirm(`Are you sure you want to completely remove '${course}' record from ${date}?`)) {
       const updatedData = { ...dailyData };
       const updatedDateData = { ...updatedData[date] };
 
-      // Remove course from that day
       delete updatedDateData[course];
 
-      // Agar us din saare course delete ho gaye, toh wo date hi uda do
       if (Object.keys(updatedDateData).length === 0) {
         delete updatedData[date];
         setDailyData(updatedData);
 
-        // Delete from DB completely using the new DELETE route
         try {
           await fetch(`${BACKEND_URL}?date=${encodeURIComponent(date)}`, { method: 'DELETE' });
         } catch (error) { console.error("Error deleting date:", error); }
       } else {
-        // Agar us din dusre courses baaki hain, toh sirf updated object POST kardo
         updatedData[date] = updatedDateData;
         setDailyData(updatedData);
 
@@ -351,6 +369,37 @@ export default function StudyTracker() {
           </table>
           <div className="medal-section">
             <h3>Today's Medal: {medal}</h3>
+          </div>
+
+          {/* 🔴 NAYA SECTION: Manual Entry */}
+          <div style={{ marginTop: '25px', padding: '15px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <h4 style={{ marginBottom: '12px', color: '#00ffcc', fontWeight: '500', fontSize: '14px', letterSpacing: '0.5px' }}>
+              + MANUAL ENTRY (MINS)
+            </h4>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <select 
+                value={manualCourse} 
+                onChange={(e) => setManualCourse(e.target.value)}
+                style={{ flex: 1, padding: '10px', fontSize: '13px' }}
+              >
+                {coursesList.map((c) => (
+                  <option key={`manual-${c}`} value={c}>{c}</option>
+                ))}
+              </select>
+              <input 
+                type="number" 
+                placeholder="Mins" 
+                value={manualMinutes}
+                onChange={(e) => setManualMinutes(e.target.value)}
+                style={{ width: '80px', padding: '10px', fontSize: '13px' }}
+              />
+              <button 
+                className="primary-btn" 
+                onClick={handleManualSubmit} 
+                style={{ margin: 0, padding: '10px 16px', fontSize: '13px', minWidth: 'auto' }}>
+                Submit
+              </button>
+            </div>
           </div>
         </div>
 
