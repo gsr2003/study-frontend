@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const BACKEND_URL = 'http://localhost:5000/api/auth';
+const BACKEND_URL = 'https://my-study-backend.onrender.com/api/study-data';
 
 export default function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
