@@ -1,14 +1,12 @@
-/* Google Fonts Import */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 
 :root {
   --bg-main: #0B0F19;
-  --card-bg: rgba(26, 32, 53, 0.6);
-  --card-border: rgba(255, 255, 255, 0.08);
+  --card-bg: rgba(26, 32, 53, 0.72);
+  --card-border: rgba(255, 255, 255, 0.07);
   --primary: #6c63ff;
   --primary-hover: #5a52d5;
   --accent: #00ffcc;
-  --accent-hover: #00e6b8;
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
 }
@@ -21,55 +19,62 @@
 
 body {
   background-color: var(--bg-main);
-  background-image: radial-gradient(circle at top right, rgba(108, 99, 255, 0.15), transparent 40%),
-                    radial-gradient(circle at bottom left, rgba(0, 255, 204, 0.1), transparent 40%);
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(108, 99, 255, 0.13), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(0, 255, 204, 0.09), transparent 50%);
   color: var(--text-main);
   font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  padding: 40px 20px;
   display: flex;
   justify-content: center;
-  min-height: 100vh;
-  padding: 50px 20px;
+  overflow-x: hidden; /* removes side lines */
 }
 
-/* Glassmorphism Cards */
-.tracker-container, .stats-container, .graph-card {
+/* Cards */
+.tracker-container,
+.stats-container,
+.graph-card {
   background: var(--card-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 35px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 28px;
   border-radius: 20px;
   border: 1px solid var(--card-border);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.tracker-container:hover, .stats-container:hover, .graph-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
+.tracker-container:hover,
+.stats-container:hover,
+.graph-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
 }
 
-/* Timer Display */
+/* Timer */
 .timer-display {
   font-size: 64px;
   font-weight: 700;
-  margin: 35px 0;
+  margin: 28px 0;
   font-family: 'JetBrains Mono', monospace;
   color: var(--accent);
-  text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+  text-shadow: 0 0 20px rgba(0, 255, 204, 0.45);
   letter-spacing: 2px;
+  text-align: center;
 }
 
-/* Inputs & Dropdowns */
+/* Inputs */
 select, input {
-  padding: 14px 16px;
-  font-size: 15px;
+  padding: 13px 15px;
+  font-size: 14px;
   width: 100%;
   border-radius: 12px;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.75);
   color: white;
   border: 1px solid var(--card-border);
   outline: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   font-family: inherit;
 }
 
@@ -79,24 +84,29 @@ select:focus, input:focus {
 }
 
 select option {
-  background: var(--bg-main);
+  background: #0B0F19;
+}
+
+.date-input {
+  color-scheme: dark;
+  cursor: pointer;
 }
 
 /* Buttons */
 button {
-  padding: 14px 24px;
-  margin: 5px;
+  padding: 12px 20px;
+  margin: 4px;
   cursor: pointer;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   transition: all 0.2s ease;
   font-family: inherit;
 }
 
 button:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .primary-btn {
@@ -107,37 +117,35 @@ button:active {
 
 .primary-btn:hover {
   background: var(--primary-hover);
-  box-shadow: 0 6px 20px rgba(108, 99, 255, 0.4);
 }
 
 .secondary-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.13);
 }
 
 .save-btn {
   width: 100%;
-  margin-top: 25px;
+  margin-top: 18px;
   background: linear-gradient(135deg, #00ffcc, #00b38f);
   color: #000;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow: 0 4px 15px rgba(0, 255, 204, 0.3);
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 18px rgba(0, 255, 204, 0.3);
 }
 
 .save-btn:hover {
-  box-shadow: 0 6px 25px rgba(0, 255, 204, 0.5);
-  filter: brightness(1.1);
+  filter: brightness(1.08);
 }
 
 .history-btn {
   width: 100%;
-  margin-top: 15px;
+  margin-top: 10px;
   background: transparent;
   color: var(--accent);
   border: 2px solid var(--accent);
@@ -146,29 +154,29 @@ button:active {
 .history-btn:hover {
   background: var(--accent);
   color: #000;
-  box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
 }
 
 /* Tables */
-.stats-container h2, .graph-card h3 {
+.stats-container h2,
+.graph-card h3 {
   text-align: center;
-  margin-bottom: 24px;
-  color: var(--text-main);
+  margin-bottom: 20px;
   font-weight: 600;
+  font-size: 17px;
 }
 
 .stats-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  margin-bottom: 24px;
-  overflow: hidden;
   border-radius: 12px;
+  overflow: hidden;
   border: 1px solid var(--card-border);
 }
 
-.stats-table th, .stats-table td {
-  padding: 16px;
+.stats-table th,
+.stats-table td {
+  padding: 14px 16px;
   text-align: left;
   border-bottom: 1px solid var(--card-border);
 }
@@ -176,10 +184,9 @@ button:active {
 .stats-table th {
   background: rgba(15, 23, 42, 0.8);
   color: var(--text-muted);
-  font-weight: 500;
+  font-size: 12px;
   text-transform: uppercase;
-  font-size: 13px;
-  letter-spacing: 1px;
+  letter-spacing: 0.6px;
 }
 
 .stats-table tr:last-child td {
@@ -192,51 +199,87 @@ button:active {
 
 .total-row {
   font-weight: 700;
-  background: rgba(0, 255, 204, 0.05);
+  background: rgba(0, 255, 204, 0.06);
   color: var(--accent);
 }
 
-/* Medals */
-.medal-section {
-  text-align: center;
-  background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.02));
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,215,0,0.2);
+/* Medal Card */
+.medal-card {
+  transition: all 0.25s ease;
 }
 
-.medal-section h3 {
-  margin: 0;
-  font-size: 22px;
-  color: #ffd700;
-  text-shadow: 0 0 15px rgba(255,215,0,0.4);
+.medal-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 30px rgba(108, 99, 255, 0.12);
 }
 
-/* Tasks Card list item hover */
-.stats-container ul li {
+/* Tasks */
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   transition: all 0.2s ease;
 }
 
-.stats-container ul li:hover {
+.task-item:hover {
+  background: rgba(255, 255, 255, 0.08);
   transform: translateX(4px);
-  background: rgba(255, 255, 255, 0.08) !important;
 }
 
-/* Layout Management */
+.task-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.task-btn.success {
+  background: rgba(0, 255, 204, 0.12);
+  color: #00ffcc;
+  border: 1px solid #00ffcc;
+}
+
+.task-btn.success:hover {
+  background: #00ffcc;
+  color: #000;
+}
+
+.task-btn.danger {
+  background: rgba(255, 68, 68, 0.12);
+  color: #ff6b6b;
+  border: 1px solid #ff6b6b;
+}
+
+.task-btn.danger:hover {
+  background: #ff6b6b;
+  color: white;
+}
+
+/* ==================== LAYOUT ==================== */
 .main-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 36px;
   align-items: center;
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 1280px;
 }
 
 .top-section {
   display: flex;
   flex-wrap: wrap;
-  gap: 30px;
+  gap: 24px;
   justify-content: center;
   width: 100%;
   align-items: stretch;
@@ -244,34 +287,156 @@ button:active {
 
 .tracker-container {
   width: 100%;
-  max-width: 380px;
-  display: flex;
-  flex-direction: column;
+  max-width: 360px;
 }
 
 .stats-container {
   width: 100%;
-  max-width: 380px;
-  display: flex;
-  flex-direction: column;
+  max-width: 360px;
+}
+
+/* Wider Medal + Tasks */
+.top-section > div:last-child {
+  max-width: 480px !important;
 }
 
 .graphs-section {
   display: flex;
   flex-wrap: wrap;
-  gap: 30px;
+  gap: 24px;
   justify-content: center;
   width: 100%;
 }
 
 .graph-card {
   width: 100%;
-  max-width: 550px;
+  max-width: 560px;
 }
 
-/* Custom Scrollbar */
+/* ==================== HEATMAP - CENTERED ==================== */
+.heatmap-card {
+  width: 100%;
+  max-width: 1100px;
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* centers the content inside the card */
+}
+
+.heatmap-card > div:first-child {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.year-select {
+  width: 110px !important;
+  padding: 10px 14px !important;
+  border-radius: 12px !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+  border: 1px solid rgba(108, 99, 255, 0.35) !important;
+  color: white !important;
+  font-weight: 500;
+}
+
+.heatmap-btn {
+  margin: 0 !important;
+  padding: 10px 18px !important;
+}
+
+.info-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.info-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Dropdowns */
+.dropdown-panel {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  z-index: 100;
+  background: rgba(26, 32, 53, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 16px;
+  min-width: 200px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+.dropdown-title {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.medal-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* Modal - more breathing space */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-box {
+  background: rgba(26, 32, 53, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 48px 44px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: var(--bg-main);
