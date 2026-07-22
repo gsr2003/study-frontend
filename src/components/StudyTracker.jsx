@@ -10,8 +10,8 @@ const getTodayDate = () => {
   return new Date().toLocaleDateString('en-GB');
 };
 
-
-const BACKEND_URL = 'https://my-study-backend.onrender.com/api/study-data'; 
+// 🔴 YAHAN APNA RENDER WALA API URL PASTE KARO
+const BACKEND_URL = 'http://localhost:5000/api/study-data'; 
 
 export default function StudyTracker() {
   const [coursesList, setCoursesList] = useState(() => {
@@ -35,8 +35,12 @@ export default function StudyTracker() {
     return saved ? JSON.parse(saved) : [];
   });
   const [newTaskInputStr, setNewTaskInputStr] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 1. GET DATA
+  // 🔴 NAYA STATE: Year Selector ke liye
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const availableYears = [2026, 2025, 2024, 2023, 2022];
+
   useEffect(() => {
     fetch(BACKEND_URL)
       .then(res => res.json())
@@ -49,11 +53,14 @@ export default function StudyTracker() {
         });
         setDailyData(formattedData); 
         setCompletedTasksData(formattedTasks);
+        setIsLoading(false);
       })
-      .catch(err => console.log('Error fetching from DB:', err));
+      .catch(err => {
+        console.log('Error fetching from DB:', err);
+        setIsLoading(false);
+      });
   }, []);
 
-  // Timer Effect
   useEffect(() => {
     let timer;
     if (isRunning) {
@@ -90,7 +97,6 @@ export default function StudyTracker() {
     if (newName && newName.trim() !== '' && newName !== oldName && !coursesList.includes(newName)) {
       const updatedList = coursesList.map(c => c === oldName ? newName.trim() : c);
       setCoursesList(updatedList);
-      
       setDailyData(prevData => {
         const newData = { ...prevData };
         for (let date in newData) {
@@ -128,7 +134,6 @@ export default function StudyTracker() {
     setDailyData((prevData) => {
       const todayData = prevData[today] || {};
       coursesList.forEach(c => { if(todayData[c] === undefined) todayData[c] = 0; });
-
       updatedTodayData = { ...todayData, [courseName]: (todayData[courseName] || 0) + minutesToAdd };
       return { ...prevData, [today]: updatedTodayData };
     });
@@ -223,6 +228,14 @@ export default function StudyTracker() {
     return h + " Hr " + m + " Min";
   };
 
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#00ffcc', fontSize: '24px', fontFamily: 'monospace' }}>
+        Loading your Study Dashboard... 🚀
+      </div>
+    );
+  }
+
   const today = getTodayDate();
   const todayData = dailyData[today] || {};
   const totalTodayMinutes = Object.values(todayData).reduce((sum, mins) => sum + mins, 0);
@@ -243,7 +256,7 @@ export default function StudyTracker() {
   coursesList.forEach(c => overallTotals[c] = 0);
   Object.values(dailyData).forEach((dayRecord) => {
     Object.keys(dayRecord).forEach((course) => {
-      if (overallTotals[course] !== newdataKeys[course]) overallTotals[course] = (overallTotals[course] || 0) + dayRecord[course];
+      overallTotals[course] = (overallTotals[course] || 0) + dayRecord[course];
     });
   });
 
@@ -251,34 +264,62 @@ export default function StudyTracker() {
     .map((course) => ({ name: course, value: overallTotals[course] }))
     .filter((data) => data.value > 0);
 
-  // 🔴 HELPER TO GENERATE LAST 30 DAYS FOR GITHUB STREAK CALENDAR
-  const getLast30Days = () => {
-    const dates = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      dates.push(d.toLocaleDateString('en-GB'));
+  // 🔴 NAYA ALGORITHM: 12 Months grouped with gaps
+  const getMonthsData = (year) => {
+    const months = [];
+    for (let m = 0; m < 12; m++) {
+      const date = new Date(year, m, 1);
+      const monthName = date.toLocaleString('en-US', { month: 'short' });
+      const weeks = [];
+      let currentWeek = new Array(7).fill(null);
+
+      while (date.getMonth() === m) {
+        const dayOfWeek = date.getDay(); // 0 = Sun, 1 = Mon, etc.
+        currentWeek[dayOfWeek] = new Date(date);
+        
+        if (dayOfWeek === 6) { // End of week
+          weeks.push(currentWeek);
+          currentWeek = new Array(7).fill(null);
+        }
+        date.setDate(date.getDate() + 1);
+      }
+      // Push remaining days of the last week of the month
+      if (currentWeek.some(d => d !== null)) {
+        weeks.push(currentWeek);
+      }
+      months.push({ monthName, weeks });
     }
-    return dates;
+    return months;
   };
 
-  // 🔴 FUNCTION TO DETERMINE COLOR BASED ON HOURS STUDIED (< 4 hrs = Red, >=4 = Bronze, >=6 = Silver, >=8 = Gold)
   const getDayColorStyle = (dateStr) => {
     const dayRecord = dailyData[dateStr];
-    if (!dayRecord) return { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }; // Inactive (No fill)
+    if (!dayRecord) return { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }; // Inactive (Empty box)
 
     const totalMins = Object.values(dayRecord).reduce((a, b) => a + b, 0);
     const hrs = totalMins / 60;
 
     if (hrs < 4) {
-      return { background: '#ff4444', boxShadow: '0 0 10px rgba(255, 68, 68, 0.4)', border: '1px solid #ff6666' }; // Red (< 4 hrs)
+      return { background: '#ff4444', boxShadow: '0 0 5px rgba(255, 68, 68, 0.4)', border: '1px solid #ff6666' }; // Red
     } else if (hrs >= 4 && hrs < 6) {
-      return { background: '#cd7f32', boxShadow: '0 0 10px rgba(205, 127, 50, 0.4)', border: '1px solid #e09f5b' }; // Bronze
+      return { background: '#cd7f32', boxShadow: '0 0 5px rgba(205, 127, 50, 0.4)', border: '1px solid #e09f5b' }; // Bronze
     } else if (hrs >= 6 && hrs < 8) {
-      return { background: '#c0c0c0', boxShadow: '0 0 10px rgba(192, 192, 192, 0.4)', border: '1px solid #dcdcdc' }; // Silver
+      return { background: '#c0c0c0', boxShadow: '0 0 5px rgba(192, 192, 192, 0.4)', border: '1px solid #dcdcdc' }; // Silver
     } else {
-      return { background: '#ffd700', boxShadow: '0 0 12px rgba(255, 215, 0, 0.6)', border: '1px solid #ffea75' }; // Gold (>= 8 hrs)
+      return { background: '#ffd700', boxShadow: '0 0 8px rgba(255, 215, 0, 0.6)', border: '1px solid #ffea75' }; // Gold
     }
+  };
+
+  // Calculate total hours for the selected year
+  const getYearlyTotalMins = () => {
+    let totalMins = 0;
+    Object.keys(dailyData).forEach(dateStr => {
+      const [d, m, y] = dateStr.split('/');
+      if (parseInt(y) === selectedYear) {
+        totalMins += Object.values(dailyData[dateStr]).reduce((a, b) => a + b, 0);
+      }
+    });
+    return totalMins;
   };
 
   if (showHistory) {
@@ -401,7 +442,6 @@ export default function StudyTracker() {
           </div>
         </div>
 
-        {/* TASKS CARD */}
         <div className="stats-container" style={{ alignSelf: 'flex-start' }}>
           <h2>Tasks for the Day</h2>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
@@ -444,50 +484,114 @@ export default function StudyTracker() {
         </div>
       </div>
 
-      {/* 🔴 NAYA SECTION: GitHub Style Study Streak & Heatmap Calendar */}
-      <div className="graph-card" style={{ width: '100%', maxWidth: '1150px' }}>
-        <h3>🔥 Study Streak & Activity Heatmap (Last 30 Days)</h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', padding: '15px 0' }}>
-          {getLast30Days().map((dateStr) => {
-            const style = getDayColorStyle(dateStr);
-            const record = dailyData[dateStr];
-            const totalMins = record ? Object.values(record).reduce((a, b) => a + b, 0) : 0;
-            const hrsText = formatMinutesToHrMin(totalMins);
+      {/* 🔴 PERFECT GITHUB STYLE 12-MONTH HEATMAP WITH YEAR SELECTOR */}
+      <div className="graph-card" style={{ width: '100%', maxWidth: '1250px', overflowX: 'auto', display: 'flex', gap: '30px' }}>
+        
+        {/* Heatmap Section */}
+        <div style={{ flexGrow: 1 }}>
+          <div style={{ marginBottom: '15px', color: '#f1f5f9', fontSize: '16px' }}>
+            {Number((getYearlyTotalMins() / 60).toFixed(1))} hours studied in {selectedYear}
+          </div>
+          
+          <div style={{ display: 'flex', gap: '6px', minWidth: 'max-content' }}>
+            
+            {/* Day Labels (Mon, Wed, Fri) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '20px', paddingRight: '8px', fontSize: '10px', color: '#94a3b8' }}>
+              <div style={{ height: '12px' }}></div>
+              <div style={{ height: '12px', lineHeight: '12px' }}>Mon</div>
+              <div style={{ height: '12px' }}></div>
+              <div style={{ height: '12px', lineHeight: '12px' }}>Wed</div>
+              <div style={{ height: '12px' }}></div>
+              <div style={{ height: '12px', lineHeight: '12px' }}>Fri</div>
+              <div style={{ height: '12px' }}></div>
+            </div>
 
-            return (
-              <div 
-                key={dateStr}
-                title={`${dateStr}: ${hrsText}`}
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '10px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s ease',
-                  ...style
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.15)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                <span style={{ color: totalMins > 0 ? '#000' : '#64748b' }}>{dateStr.split('/')[0]}</span>
-              </div>
-            );
-          })}
+            {/* Months Rendering */}
+            <div style={{ display: 'flex', gap: '15px' }}>
+              {getMonthsData(selectedYear).map((month, mIndex) => (
+                <div key={mIndex} style={{ display: 'flex', flexDirection: 'column' }}>
+                  
+                  {/* Month Label */}
+                  <div style={{ height: '20px', fontSize: '11px', color: '#94a3b8' }}>
+                    {month.monthName}
+                  </div>
+                  
+                  {/* Weeks in Month */}
+                  <div style={{ display: 'flex', gap: '3px' }}>
+                    {month.weeks.map((week, wIndex) => (
+                      <div key={wIndex} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {week.map((day, dIndex) => {
+                          if (!day) {
+                            return <div key={dIndex} style={{ width: '12px', height: '12px', background: 'transparent' }}></div>;
+                          }
+                          
+                          const dateStr = day.toLocaleDateString('en-GB');
+                          const style = getDayColorStyle(dateStr);
+                          const record = dailyData[dateStr];
+                          const totalMins = record ? Object.values(record).reduce((a, b) => a + b, 0) : 0;
+                          const hrsText = formatMinutesToHrMin(totalMins);
+
+                          return (
+                            <div 
+                              key={dIndex}
+                              title={`${dateStr}: ${hrsText}`}
+                              style={{
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '3px',
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s ease',
+                                ...style
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            ></div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Legend */}
+          <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '15px', marginTop: '20px', marginLeft: '30px', fontSize: '11px', color: '#94a3b8' }}>
+            <span style={{ marginRight: '5px' }}>Less</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '12px', height: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '3px', border: '1px solid rgba(255,255,255,0.08)' }}></div> Empty</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '12px', height: '12px', background: '#ff4444', borderRadius: '3px' }}></div> &lt; 4 Hours</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '12px', height: '12px', background: '#cd7f32', borderRadius: '3px' }}></div> Bronze</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '12px', height: '12px', background: '#c0c0c0', borderRadius: '3px' }}></div> Silver</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '12px', height: '12px', background: '#ffd700', borderRadius: '3px' }}></div> Gold</div>
+            <span style={{ marginLeft: '5px' }}>More</span>
+          </div>
         </div>
 
-        {/* Color Legend Guide */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '15px', flexWrap: 'wrap', fontSize: '12px', color: '#94a3b8' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px' }}></div> Inactive</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#ff4444', borderRadius: '3px' }}></div> &lt; 4 Hours (Red)</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#cd7f32', borderRadius: '3px' }}></div> Bronze (4-6h)</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#c0c0c0', borderRadius: '3px' }}></div> Silver (6-8h)</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#ffd700', borderRadius: '3px' }}></div> Gold (8h+)</div>
+        {/* 🔴 NAYA: Year Selector Sidebar */}
+        <div style={{ width: '100px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: '20px' }}>
+          {availableYears.map(year => (
+            <button
+              key={year}
+              onClick={() => setSelectedYear(year)}
+              style={{
+                background: selectedYear === year ? '#2f81f7' : 'transparent',
+                color: selectedYear === year ? '#fff' : '#94a3b8',
+                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontWeight: selectedYear === year ? '600' : '400',
+                transition: '0.2s ease',
+              }}
+              onMouseEnter={(e) => { if(selectedYear !== year) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={(e) => { if(selectedYear !== year) e.currentTarget.style.background = 'transparent' }}
+            >
+              {year}
+            </button>
+          ))}
         </div>
       </div>
 
