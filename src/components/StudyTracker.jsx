@@ -10,6 +10,9 @@ const getTodayDate = () => {
   return new Date().toLocaleDateString('en-GB');
 };
 
+// 🔴 YAHAN APNA RENDER WALA API URL PASTE KARO 🔴
+const BACKEND_URL = 'https://YOUR-RENDER-URL.onrender.com/api/study-data'; 
+
 export default function StudyTracker() {
   const [coursesList, setCoursesList] = useState(() => {
     const savedCourses = localStorage.getItem('studyTrackerCourses');
@@ -24,9 +27,9 @@ export default function StudyTracker() {
 
   const [dailyData, setDailyData] = useState({});
 
-  // 1. BACKEND SE DATA MANGWANA (GET)
+  // 1. GET DATA
   useEffect(() => {
-    fetch('https://my-study-backend.onrender.com/api/study-data')
+    fetch(BACKEND_URL)
       .then(res => res.json())
       .then(dbData => {
         const formattedData = {};
@@ -62,13 +65,13 @@ export default function StudyTracker() {
   };
 
   const handleDeleteCourse = (courseToDelete) => {
-    if (window.confirm("Are you sure you want to delete '" + courseToDelete + "'?")) {
+    if (window.confirm(`Are you sure you want to delete '${courseToDelete}' from your list?`)) {
       setCoursesList(coursesList.filter(c => c !== courseToDelete));
     }
   };
 
   const handleRenameCourse = (oldName) => {
-    const newName = window.prompt("Enter new name for '" + oldName + "':", oldName);
+    const newName = window.prompt(`Enter new name for '${oldName}':`, oldName);
     if (newName && newName.trim() !== '' && newName !== oldName && !coursesList.includes(newName)) {
       const updatedList = coursesList.map(c => c === oldName ? newName.trim() : c);
       setCoursesList(updatedList);
@@ -87,7 +90,7 @@ export default function StudyTracker() {
     }
   };
 
-  // 2. BACKEND ME DATA SAVE KARNA (POST) - Naya Fix Yahan Hai
+  // 2. POST DATA (Save Session)
   const endSession = async () => {
     setIsRunning(false);
     const minutesStudied = Math.ceil(time / 60);
@@ -110,29 +113,79 @@ export default function StudyTracker() {
         return { ...prevData, [today]: updatedTodayData };
       });
 
-      // API Call to Node.js Server
       try {
-        const response = await fetch('https://my-study-backend.onrender.com/api/study-data', {
+        const response = await fetch(BACKEND_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            date: today,
-            coursesData: updatedTodayData
-          })
+          body: JSON.stringify({ date: today, coursesData: updatedTodayData })
         });
-
-        // Error Catch Fix: HTTP status check karna
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        alert("Success! " + minutesStudied + " minutes added to Cloud DB.");
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        alert(`Success! ${minutesStudied} minutes added to Cloud DB.`);
       } catch (error) {
         alert("Error saving to database! Check console.");
         console.error("Save error:", error);
       }
     }
     setTime(0);
+  };
+
+  // 🔴 NAYA FUNCTION: Edit History
+  const handleEditHistory = async (date, course, currentMins) => {
+    const newMins = window.prompt(`Edit total minutes for '${course}' on ${date}:`, currentMins);
+    
+    if (newMins !== null && newMins.trim() !== '' && !isNaN(newMins) && Number(newMins) >= 0) {
+      const updatedMins = Number(newMins);
+      const updatedData = { ...dailyData };
+      
+      // Update data locally
+      updatedData[date] = { ...updatedData[date], [course]: updatedMins };
+      setDailyData(updatedData);
+
+      // Save updated data to cloud
+      try {
+        await fetch(BACKEND_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: date, coursesData: updatedData[date] })
+        });
+      } catch (error) {
+        console.error("Error updating record:", error);
+      }
+    }
+  };
+
+  // 🔴 NAYA FUNCTION: Delete History
+  const handleDeleteHistory = async (date, course) => {
+    if (window.confirm(`Are you sure you want to completely remove '${course}' record from ${date}?`)) {
+      const updatedData = { ...dailyData };
+      const updatedDateData = { ...updatedData[date] };
+
+      // Remove course from that day
+      delete updatedDateData[course];
+
+      // Agar us din saare course delete ho gaye, toh wo date hi uda do
+      if (Object.keys(updatedDateData).length === 0) {
+        delete updatedData[date];
+        setDailyData(updatedData);
+
+        // Delete from DB completely using the new DELETE route
+        try {
+          await fetch(`${BACKEND_URL}?date=${encodeURIComponent(date)}`, { method: 'DELETE' });
+        } catch (error) { console.error("Error deleting date:", error); }
+      } else {
+        // Agar us din dusre courses baaki hain, toh sirf updated object POST kardo
+        updatedData[date] = updatedDateData;
+        setDailyData(updatedData);
+
+        try {
+          await fetch(BACKEND_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: date, coursesData: updatedDateData })
+          });
+        } catch (error) { console.error("Error updating record after delete:", error); }
+      }
+    }
   };
 
   const formatTime = (totalSeconds) => {
@@ -214,8 +267,25 @@ export default function StudyTracker() {
                     <td>
                       {Object.keys(dailyData[date]).map(c => 
                         dailyData[date][c] > 0 ? (
-                          <div key={c} style={{ fontSize: '14px', color: '#ccc' }}>
-                            {c}: {formatMinutesToHrMin(dailyData[date][c])}
+                          <div key={c} style={{ 
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            padding: '8px', marginBottom: '5px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px'
+                          }}>
+                            <span style={{ fontSize: '14px', color: '#ccc' }}>
+                              {c}: {formatMinutesToHrMin(dailyData[date][c])}
+                            </span>
+                            <div>
+                              <button 
+                                onClick={() => handleEditHistory(date, c, dailyData[date][c])} 
+                                style={{ padding: '4px 8px', fontSize: '12px', background: 'transparent', color: '#00ffcc', border: '1px solid #00ffcc', marginRight: '5px', minWidth: 'auto' }}>
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteHistory(date, c)} 
+                                style={{ padding: '4px 8px', fontSize: '12px', background: 'transparent', color: '#ff4444', border: '1px solid #ff4444', minWidth: 'auto' }}>
+                                Del
+                              </button>
+                            </div>
                           </div>
                         ) : null
                       )}
@@ -292,13 +362,12 @@ export default function StudyTracker() {
               value={newCourseInput} 
               onChange={(e) => setNewCourseInput(e.target.value)} 
               placeholder="New Course Name..."
-              style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #444', background: '#2a2a40', color: '#fff' }}
             />
             <button className="primary-btn" style={{ margin: 0 }} onClick={handleAddCourse}>Add</button>
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {coursesList.map(c => (
-              <li key={c} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#2a2a40', padding: '10px', marginBottom: '5px', borderRadius: '6px' }}>
+              <li key={c} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.05)', padding: '10px', marginBottom: '5px', borderRadius: '6px' }}>
                 <span>{c}</span>
                 <div>
                   <button onClick={() => handleRenameCourse(c)} style={{ background: 'transparent', color: '#00ffcc', border: 'none', cursor: 'pointer', marginRight: '10px' }}>Edit</button>
