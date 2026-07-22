@@ -11,7 +11,7 @@ const getTodayDate = () => {
 };
 
 // 🔴 YAHAN APNA RENDER WALA API URL PASTE KARO
-const BACKEND_URL = 'http://localhost:5000/api/study-data'; 
+const BACKEND_URL = 'https://my-study-backend.onrender.com/api/study-data'; 
 
 export default function StudyTracker() {
   const [coursesList, setCoursesList] = useState(() => {
