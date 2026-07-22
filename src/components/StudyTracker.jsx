@@ -24,22 +24,32 @@ export default function StudyTracker() {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  
   const [dailyData, setDailyData] = useState({});
-
-  // 🔴 Manual Entry States
   const [manualCourse, setManualCourse] = useState(coursesList[0] || '');
   const [manualMinutes, setManualMinutes] = useState('');
 
-  // 1. GET DATA
+  // 🔴 NEW STATES FOR TASKS
+  const [completedTasksData, setCompletedTasksData] = useState({});
+  const [currentTasks, setCurrentTasks] = useState(() => {
+    const saved = localStorage.getItem('studyTasks');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [newTaskInputStr, setNewTaskInputStr] = useState('');
+
+  // 1. GET DATA (Ab tasks bhi fetch honge)
   useEffect(() => {
     fetch(BACKEND_URL)
       .then(res => res.json())
       .then(dbData => {
         const formattedData = {};
+        const formattedTasks = {};
         dbData.forEach(item => {
-          formattedData[item.date] = item.coursesData;
+          formattedData[item.date] = item.coursesData || {};
+          formattedTasks[item.date] = item.completedTasks || [];
         });
         setDailyData(formattedData); 
+        setCompletedTasksData(formattedTasks);
       })
       .catch(err => console.log('Error fetching from DB:', err));
   }, []);
@@ -55,14 +65,14 @@ export default function StudyTracker() {
 
   useEffect(() => {
     localStorage.setItem('studyTrackerCourses', JSON.stringify(coursesList));
-    if (!coursesList.includes(selectedCourse) && coursesList.length > 0) {
-      setSelectedCourse(coursesList[0]);
-    }
-    // Sync manual course dropdown as well
-    if (!coursesList.includes(manualCourse) && coursesList.length > 0) {
-      setManualCourse(coursesList[0]);
-    }
+    if (!coursesList.includes(selectedCourse) && coursesList.length > 0) setSelectedCourse(coursesList[0]);
+    if (!coursesList.includes(manualCourse) && coursesList.length > 0) setManualCourse(coursesList[0]);
   }, [coursesList, selectedCourse, manualCourse]);
+
+  // Save current tasks to LocalStorage so they don't disappear on refresh
+  useEffect(() => {
+    localStorage.setItem('studyTasks', JSON.stringify(currentTasks));
+  }, [currentTasks]);
 
   const handleAddCourse = () => {
     if (newCourseInput.trim() !== '' && !coursesList.includes(newCourseInput.trim())) {
@@ -72,7 +82,7 @@ export default function StudyTracker() {
   };
 
   const handleDeleteCourse = (courseToDelete) => {
-    if (window.confirm(`Are you sure you want to delete '${courseToDelete}' from your list?`)) {
+    if (window.confirm(`Delete '${courseToDelete}'?`)) {
       setCoursesList(coursesList.filter(c => c !== courseToDelete));
     }
   };
@@ -97,74 +107,49 @@ export default function StudyTracker() {
     }
   };
 
-  // 2. POST DATA (Save Session - Auto)
   const endSession = async () => {
     setIsRunning(false);
     const minutesStudied = Math.ceil(time / 60);
-
-    if (minutesStudied > 0 && selectedCourse) {
-      saveTimeToCloud(selectedCourse, minutesStudied);
-    }
+    if (minutesStudied > 0 && selectedCourse) saveTimeToCloud(selectedCourse, minutesStudied);
     setTime(0);
   };
 
-  // 🔴 NAYA FUNCTION: Manual Entry Submit
   const handleManualSubmit = () => {
     const mins = parseInt(manualMinutes, 10);
-    if (isNaN(mins) || mins <= 0) {
-      alert("Please enter valid minutes (greater than 0).");
-      return;
-    }
-    if (!manualCourse) {
-      alert("Please select a course.");
-      return;
-    }
+    if (isNaN(mins) || mins <= 0) return alert("Enter valid minutes!");
+    if (!manualCourse) return alert("Select a course!");
     
     saveTimeToCloud(manualCourse, mins);
-    setManualMinutes(''); // Input khali karne ke liye
+    setManualMinutes('');
   };
 
-  // Helper Function for Cloud Save (Dono Timer aur Manual ise use karenge)
   const saveTimeToCloud = async (courseName, minutesToAdd) => {
     const today = getTodayDate();
     let updatedTodayData = {};
 
     setDailyData((prevData) => {
       const todayData = prevData[today] || {};
-      coursesList.forEach(c => {
-          if(todayData[c] === undefined) todayData[c] = 0;
-      });
+      coursesList.forEach(c => { if(todayData[c] === undefined) todayData[c] = 0; });
 
-      updatedTodayData = {
-        ...todayData,
-        [courseName]: (todayData[courseName] || 0) + minutesToAdd
-      };
-
+      updatedTodayData = { ...todayData, [courseName]: (todayData[courseName] || 0) + minutesToAdd };
       return { ...prevData, [today]: updatedTodayData };
     });
 
     try {
-      const response = await fetch(BACKEND_URL, {
+      await fetch(BACKEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: today, coursesData: updatedTodayData })
       });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       alert(`Success! ${minutesToAdd} minutes added to ${courseName}.`);
-    } catch (error) {
-      alert("Error saving to database! Check console.");
-      console.error("Save error:", error);
-    }
+    } catch (error) { console.error("Save error:", error); }
   };
 
   const handleEditHistory = async (date, course, currentMins) => {
     const newMins = window.prompt(`Edit total minutes for '${course}' on ${date}:`, currentMins);
-    
     if (newMins !== null && newMins.trim() !== '' && !isNaN(newMins) && Number(newMins) >= 0) {
-      const updatedMins = Number(newMins);
       const updatedData = { ...dailyData };
-      
-      updatedData[date] = { ...updatedData[date], [course]: updatedMins };
+      updatedData[date] = { ...updatedData[date], [course]: Number(newMins) };
       setDailyData(updatedData);
 
       try {
@@ -178,32 +163,56 @@ export default function StudyTracker() {
   };
 
   const handleDeleteHistory = async (date, course) => {
-    if (window.confirm(`Are you sure you want to completely remove '${course}' record from ${date}?`)) {
+    if (window.confirm(`Remove '${course}' record from ${date}?`)) {
       const updatedData = { ...dailyData };
       const updatedDateData = { ...updatedData[date] };
-
       delete updatedDateData[course];
+      
+      updatedData[date] = updatedDateData;
+      setDailyData(updatedData);
 
-      if (Object.keys(updatedDateData).length === 0) {
-        delete updatedData[date];
-        setDailyData(updatedData);
-
-        try {
-          await fetch(`${BACKEND_URL}?date=${encodeURIComponent(date)}`, { method: 'DELETE' });
-        } catch (error) { console.error("Error deleting date:", error); }
-      } else {
-        updatedData[date] = updatedDateData;
-        setDailyData(updatedData);
-
-        try {
-          await fetch(BACKEND_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date: date, coursesData: updatedDateData })
-          });
-        } catch (error) { console.error("Error updating record after delete:", error); }
-      }
+      try {
+        await fetch(BACKEND_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: date, coursesData: updatedDateData })
+        });
+      } catch (error) { console.error("Error updating record:", error); }
     }
+  };
+
+  // 🔴 NEW FUNCTIONS FOR TASKS
+  const handleAddNewTask = () => {
+    if (newTaskInputStr.trim()) {
+      setCurrentTasks([...currentTasks, newTaskInputStr.trim()]);
+      setNewTaskInputStr('');
+    }
+  };
+
+  const handleCompleteTask = async (taskText) => {
+    const today = getTodayDate();
+    
+    // Remove from ongoing list
+    setCurrentTasks(currentTasks.filter(t => t !== taskText));
+    
+    // Add to completed list
+    setCompletedTasksData(prev => {
+      const todayTasks = prev[today] || [];
+      const newTasksList = [...todayTasks, taskText];
+      
+      // Save to Cloud DB
+      fetch(BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: today, completedTasks: newTasksList })
+      }).catch(err => console.error(err));
+
+      return { ...prev, [today]: newTasksList };
+    });
+  };
+
+  const handleRemoveTask = (taskText) => {
+    setCurrentTasks(currentTasks.filter(t => t !== taskText));
   };
 
   const formatTime = (totalSeconds) => {
@@ -234,35 +243,26 @@ export default function StudyTracker() {
 
   const lineChartData = Object.keys(dailyData).map((date) => {
     const dayTotalMins = Object.values(dailyData[date]).reduce((sum, val) => sum + val, 0);
-    return {
-      date: date,
-      hours: Number((dayTotalMins / 60).toFixed(2))
-    };
+    return { date: date, hours: Number((dayTotalMins / 60).toFixed(2)) };
   });
 
   const overallTotals = {};
   coursesList.forEach(c => overallTotals[c] = 0);
   Object.values(dailyData).forEach((dayRecord) => {
     Object.keys(dayRecord).forEach((course) => {
-      if (overallTotals[course] !== undefined) {
-        overallTotals[course] += dayRecord[course];
-      } else {
-        overallTotals[course] = dayRecord[course];
-      }
+      if (overallTotals[course] !== undefined) overallTotals[course] += dayRecord[course];
+      else overallTotals[course] = dayRecord[course];
     });
   });
 
   const pieChartData = Object.keys(overallTotals)
-    .map((course) => ({
-      name: course,
-      value: overallTotals[course]
-    }))
+    .map((course) => ({ name: course, value: overallTotals[course] }))
     .filter((data) => data.value > 0);
 
   if (showHistory) {
     return (
       <div className="main-wrapper">
-        <div className="stats-container" style={{ width: '100%', maxWidth: '800px' }}>
+        <div className="stats-container" style={{ width: '100%', maxWidth: '900px' }}>
           <h2>All Time Study History</h2>
           <button className="secondary-btn" onClick={() => setShowHistory(false)} style={{ marginBottom: '20px' }}>
             Back to Dashboard
@@ -273,6 +273,7 @@ export default function StudyTracker() {
                 <th>Date</th>
                 <th>Total Time</th>
                 <th>Course Breakdown</th>
+                <th>Tasks Completed</th>
               </tr>
             </thead>
             <tbody>
@@ -285,28 +286,23 @@ export default function StudyTracker() {
                     <td>
                       {Object.keys(dailyData[date]).map(c => 
                         dailyData[date][c] > 0 ? (
-                          <div key={c} style={{ 
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            padding: '8px', marginBottom: '5px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px'
-                          }}>
-                            <span style={{ fontSize: '14px', color: '#ccc' }}>
-                              {c}: {formatMinutesToHrMin(dailyData[date][c])}
-                            </span>
+                          <div key={c} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px', marginBottom: '5px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px' }}>
+                            <span style={{ fontSize: '14px', color: '#ccc' }}>{c}: {formatMinutesToHrMin(dailyData[date][c])}</span>
                             <div>
-                              <button 
-                                onClick={() => handleEditHistory(date, c, dailyData[date][c])} 
-                                style={{ padding: '4px 8px', fontSize: '12px', background: 'transparent', color: '#00ffcc', border: '1px solid #00ffcc', marginRight: '5px', minWidth: 'auto' }}>
-                                Edit
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteHistory(date, c)} 
-                                style={{ padding: '4px 8px', fontSize: '12px', background: 'transparent', color: '#ff4444', border: '1px solid #ff4444', minWidth: 'auto' }}>
-                                Del
-                              </button>
+                              <button onClick={() => handleEditHistory(date, c, dailyData[date][c])} style={{ padding: '2px 6px', fontSize: '11px', background: 'transparent', color: '#00ffcc', border: '1px solid #00ffcc', marginRight: '5px' }}>Edit</button>
+                              <button onClick={() => handleDeleteHistory(date, c)} style={{ padding: '2px 6px', fontSize: '11px', background: 'transparent', color: '#ff4444', border: '1px solid #ff4444' }}>Del</button>
                             </div>
                           </div>
                         ) : null
                       )}
+                    </td>
+                    {/* 🔴 NAYA COLUMN HISTORY ME */}
+                    <td>
+                      {completedTasksData[date] && completedTasksData[date].length > 0 ? (
+                        <ul style={{ paddingLeft: '15px', margin: 0, color: '#00ffcc', fontSize: '13px' }}>
+                          {completedTasksData[date].map((t, i) => <li key={i}>{t}</li>)}
+                        </ul>
+                      ) : <span style={{ color: '#555' }}>No tasks</span>}
                     </td>
                   </tr>
                 )
@@ -321,6 +317,7 @@ export default function StudyTracker() {
   return (
     <div className="main-wrapper">
       <div className="top-section">
+        
         <div className="tracker-container">
           <h2>Study Dashboard</h2>
           <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)}>
@@ -371,64 +368,72 @@ export default function StudyTracker() {
             <h3>Today's Medal: {medal}</h3>
           </div>
 
-          {/* 🔴 NAYA SECTION: Manual Entry */}
           <div style={{ marginTop: '25px', padding: '15px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <h4 style={{ marginBottom: '12px', color: '#00ffcc', fontWeight: '500', fontSize: '14px', letterSpacing: '0.5px' }}>
-              + MANUAL ENTRY (MINS)
-            </h4>
+            <h4 style={{ marginBottom: '12px', color: '#00ffcc', fontWeight: '500', fontSize: '14px', letterSpacing: '0.5px' }}>+ MANUAL ENTRY (MINS)</h4>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <select 
-                value={manualCourse} 
-                onChange={(e) => setManualCourse(e.target.value)}
-                style={{ flex: 1, padding: '10px', fontSize: '13px' }}
-              >
-                {coursesList.map((c) => (
-                  <option key={`manual-${c}`} value={c}>{c}</option>
-                ))}
+              <select value={manualCourse} onChange={(e) => setManualCourse(e.target.value)} style={{ flex: 1, padding: '10px', fontSize: '13px' }}>
+                {coursesList.map((c) => <option key={`manual-${c}`} value={c}>{c}</option>)}
               </select>
-              <input 
-                type="number" 
-                placeholder="Mins" 
-                value={manualMinutes}
-                onChange={(e) => setManualMinutes(e.target.value)}
-                style={{ width: '80px', padding: '10px', fontSize: '13px' }}
-              />
-              <button 
-                className="primary-btn" 
-                onClick={handleManualSubmit} 
-                style={{ margin: 0, padding: '10px 16px', fontSize: '13px', minWidth: 'auto' }}>
-                Submit
-              </button>
+              <input type="number" placeholder="Mins" value={manualMinutes} onChange={(e) => setManualMinutes(e.target.value)} style={{ width: '80px', padding: '10px', fontSize: '13px' }} />
+              <button className="primary-btn" onClick={handleManualSubmit} style={{ margin: 0, padding: '10px 16px', fontSize: '13px', minWidth: 'auto' }}>Submit</button>
             </div>
           </div>
         </div>
 
+        {/* 🔴 NAYA SECTION: Tasks for the Day */}
         <div className="stats-container" style={{ alignSelf: 'flex-start' }}>
-          <h2>Manage Courses</h2>
+          <h2>Tasks for the Day</h2>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
             <input 
               type="text" 
-              value={newCourseInput} 
-              onChange={(e) => setNewCourseInput(e.target.value)} 
-              placeholder="New Course Name..."
+              value={newTaskInputStr} 
+              onChange={(e) => setNewTaskInputStr(e.target.value)} 
+              placeholder="What needs to be done?"
             />
-            <button className="primary-btn" style={{ margin: 0 }} onClick={handleAddCourse}>Add</button>
+            <button className="primary-btn" style={{ margin: 0 }} onClick={handleAddNewTask}>Add</button>
           </div>
+          
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {coursesList.map(c => (
-              <li key={c} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.05)', padding: '10px', marginBottom: '5px', borderRadius: '6px' }}>
-                <span>{c}</span>
-                <div>
-                  <button onClick={() => handleRenameCourse(c)} style={{ background: 'transparent', color: '#00ffcc', border: 'none', cursor: 'pointer', marginRight: '10px' }}>Edit</button>
-                  <button onClick={() => handleDeleteCourse(c)} style={{ background: 'transparent', color: '#ff4444', border: 'none', cursor: 'pointer' }}>Del</button>
+            {currentTasks.map((t, idx) => (
+              <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.05)', padding: '10px', marginBottom: '5px', borderRadius: '6px' }}>
+                <span style={{ fontSize: '15px' }}>{t}</span>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  <button 
+                    onClick={() => handleCompleteTask(t)} 
+                    style={{ background: 'transparent', color: '#00ffcc', border: '2px solid #00ffcc', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}
+                    title="Mark as Completed"
+                  >✓</button>
+                  <button 
+                    onClick={() => handleRemoveTask(t)} 
+                    style={{ background: 'transparent', color: '#ff4444', border: '2px solid #ff4444', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold' }}
+                    title="Delete Task"
+                  >✕</button>
                 </div>
               </li>
             ))}
+            {currentTasks.length === 0 && (
+              <li style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px', marginTop: '10px' }}>No pending tasks! 🎉</li>
+            )}
           </ul>
+
+          {/* Completed Tasks Log for Today */}
+          {completedTasksData[today] && completedTasksData[today].length > 0 && (
+            <div style={{ marginTop: '25px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <h4 style={{ color: '#00ffcc', marginBottom: '10px', fontSize: '14px' }}>✓ Completed Today:</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {completedTasksData[today].map((ct, idx) => (
+                  <li key={idx} style={{ padding: '8px', background: 'rgba(0, 255, 204, 0.05)', color: '#94a3b8', marginBottom: '5px', borderRadius: '6px', textDecoration: 'line-through', fontSize: '14px' }}>
+                    {ct}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="graphs-section">
+        {/* ... Graphs (Same as before) ... */}
         <div className="graph-card">
           <h3>Daily Total Study Hours</h3>
           <div style={{ width: '100%', height: 300 }}>

@@ -1,10 +1,9 @@
-/* Google Fonts Import - Premium UI aur Coding font ke liye */
+/* Google Fonts Import */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 
-/* Color Variables - Ek jagah se colors manage karne ke liye */
 :root {
-  --bg-main: #0B0F19; /* Deep dark blue/black */
-  --card-bg: rgba(26, 32, 53, 0.6); /* Transparent for glass effect */
+  --bg-main: #0B0F19;
+  --card-bg: rgba(26, 32, 53, 0.6);
   --card-border: rgba(255, 255, 255, 0.08);
   --primary: #6c63ff;
   --primary-hover: #5a52d5;
@@ -22,7 +21,6 @@
 
 body {
   background-color: var(--bg-main);
-  /* Subtle Background Gradient glow */
   background-image: radial-gradient(circle at top right, rgba(108, 99, 255, 0.15), transparent 40%),
                     radial-gradient(circle at bottom left, rgba(0, 255, 204, 0.1), transparent 40%);
   color: var(--text-main);
@@ -33,10 +31,10 @@ body {
   padding: 50px 20px;
 }
 
-/* 🌟 Glassmorphism Effect for all Cards */
+/* Glassmorphism Cards */
 .tracker-container, .stats-container, .graph-card {
   background: var(--card-bg);
-  backdrop-filter: blur(16px); /* The magic blur effect */
+  backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   padding: 35px;
   border-radius: 20px;
@@ -45,24 +43,23 @@ body {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Card Hover Animations */
 .tracker-container:hover, .stats-container:hover, .graph-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
 }
 
-/* 🌟 Neon Glowing Timer */
+/* Timer Display */
 .timer-display {
   font-size: 64px;
   font-weight: 700;
   margin: 35px 0;
-  font-family: 'JetBrains Mono', monospace; /* Hacker style font */
+  font-family: 'JetBrains Mono', monospace;
   color: var(--accent);
   text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
   letter-spacing: 2px;
 }
 
-/* Modern Inputs & Dropdowns */
+/* Inputs & Dropdowns */
 select, input {
   padding: 14px 16px;
   font-size: 15px;
@@ -85,7 +82,7 @@ select option {
   background: var(--bg-main);
 }
 
-/* 🌟 Premium Button Interactions */
+/* Buttons */
 button {
   padding: 14px 24px;
   margin: 5px;
@@ -99,7 +96,7 @@ button {
 }
 
 button:active {
-  transform: scale(0.96); /* Click effect */
+  transform: scale(0.96);
 }
 
 .primary-btn {
@@ -152,7 +149,7 @@ button:active {
   box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
 }
 
-/* 🌟 Sleek Tables */
+/* Tables */
 .stats-container h2, .graph-card h3 {
   text-align: center;
   margin-bottom: 24px;
@@ -190,7 +187,7 @@ button:active {
 }
 
 .stats-table tr:hover:not(.total-row) {
-  background: rgba(255, 255, 255, 0.04); /* Row highlight on hover */
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .total-row {
@@ -199,7 +196,7 @@ button:active {
   color: var(--accent);
 }
 
-/* 🌟 Glowing Medals */
+/* Medals */
 .medal-section {
   text-align: center;
   background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.02));
@@ -215,6 +212,16 @@ button:active {
   text-shadow: 0 0 15px rgba(255,215,0,0.4);
 }
 
+/* 🌟 NAYA TASKS CARD STYLING */
+.stats-container ul li {
+  transition: all 0.2s ease;
+}
+
+.stats-container ul li:hover {
+  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
 /* Layout Management */
 .main-wrapper {
   display: flex;
@@ -222,7 +229,7 @@ button:active {
   gap: 40px;
   align-items: center;
   width: 100%;
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -237,14 +244,14 @@ button:active {
 
 .tracker-container {
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
 }
 
 .stats-container {
   width: 100%;
-  max-width: 450px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
 }
@@ -259,7 +266,7 @@ button:active {
 
 .graph-card {
   width: 100%;
-  max-width: 500px;
+  max-width: 550px;
 }
 
 /* Custom Scrollbar */
@@ -275,13 +282,4 @@ button:active {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
-}
-
-/* Course List Hover Fix */
-ul li {
-  transition: all 0.2s ease;
-}
-ul li:hover {
-  transform: translateX(5px);
-  background: rgba(255, 255, 255, 0.08) !important;
 }
