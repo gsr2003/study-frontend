@@ -26,7 +26,7 @@ export default function StudyTracker() {
 
   // 1. BACKEND SE DATA MANGWANA (GET)
   useEffect(() => {
-    fetch('http://localhost:5000/api/study-data')
+    fetch('https://my-study-backend.onrender.com/api/study-data')
       .then(res => res.json())
       .then(dbData => {
         const formattedData = {};
@@ -112,7 +112,7 @@ export default function StudyTracker() {
 
       // API Call to Node.js Server
       try {
-        const response = await fetch('http://localhost:5000/api/study-data', {
+        const response = await fetch('https://my-study-backend.onrender.com/api/study-data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
