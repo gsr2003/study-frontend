@@ -1,132 +1,229 @@
+/* Google Fonts Import - Premium UI aur Coding font ke liye */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+/* Color Variables - Ek jagah se colors manage karne ke liye */
+:root {
+  --bg-main: #0B0F19; /* Deep dark blue/black */
+  --card-bg: rgba(26, 32, 53, 0.6); /* Transparent for glass effect */
+  --card-border: rgba(255, 255, 255, 0.08);
+  --primary: #6c63ff;
+  --primary-hover: #5a52d5;
+  --accent: #00ffcc;
+  --accent-hover: #00e6b8;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 body {
-  background-color: #121212;
-  color: white;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-main);
+  /* Subtle Background Gradient glow */
+  background-image: radial-gradient(circle at top right, rgba(108, 99, 255, 0.15), transparent 40%),
+                    radial-gradient(circle at bottom left, rgba(0, 255, 204, 0.1), transparent 40%);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
   display: flex;
   justify-content: center;
-  padding-top: 50px;
+  min-height: 100vh;
+  padding: 50px 20px;
 }
 
-.tracker-container {
-  background: #1e1e2f;
-  padding: 30px;
-  border-radius: 12px;
-  text-align: center;
-  width: 350px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+/* 🌟 Glassmorphism Effect for all Cards */
+.tracker-container, .stats-container, .graph-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px); /* The magic blur effect */
+  -webkit-backdrop-filter: blur(16px);
+  padding: 35px;
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Card Hover Animations */
+.tracker-container:hover, .stats-container:hover, .graph-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
+}
+
+/* 🌟 Neon Glowing Timer */
 .timer-display {
-  font-size: 56px;
-  font-weight: bold;
-  margin: 30px 0;
-  font-family: monospace;
-  color: #00ffcc;
+  font-size: 64px;
+  font-weight: 700;
+  margin: 35px 0;
+  font-family: 'JetBrains Mono', monospace; /* Hacker style font */
+  color: var(--accent);
+  text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+  letter-spacing: 2px;
 }
 
-select {
-  padding: 10px;
-  font-size: 16px;
+/* Modern Inputs & Dropdowns */
+select, input {
+  padding: 14px 16px;
+  font-size: 15px;
   width: 100%;
-  border-radius: 6px;
-  background: #2a2a40;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
   color: white;
-  border: 1px solid #444;
+  border: 1px solid var(--card-border);
+  outline: none;
+  transition: all 0.3s ease;
+  font-family: inherit;
 }
 
+select:focus, input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 255, 204, 0.15);
+}
+
+select option {
+  background: var(--bg-main);
+}
+
+/* 🌟 Premium Button Interactions */
 button {
-  padding: 12px 24px;
+  padding: 14px 24px;
   margin: 5px;
   cursor: pointer;
   border: none;
-  border-radius: 6px;
-  font-size: 16px;
-  font-weight: bold;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+button:active {
+  transform: scale(0.96); /* Click effect */
 }
 
 .primary-btn {
-  background: #6c63ff;
+  background: var(--primary);
   color: white;
+  box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+}
+
+.primary-btn:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 6px 20px rgba(108, 99, 255, 0.4);
 }
 
 .secondary-btn {
-  background: #444;
+  background: rgba(255, 255, 255, 0.1);
   color: white;
 }
 
-.main-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-  align-items: center;
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .save-btn {
   width: 100%;
-  margin-top: 20px;
-  background: #00ffcc;
-  color: #121212;
+  margin-top: 25px;
+  background: linear-gradient(135deg, #00ffcc, #00b38f);
+  color: #000;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(0, 255, 204, 0.3);
 }
 
-.stats-container {
-  background: #1e1e2f;
-  padding: 30px;
-  border-radius: 12px;
-  width: 400px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+.save-btn:hover {
+  box-shadow: 0 6px 25px rgba(0, 255, 204, 0.5);
+  filter: brightness(1.1);
 }
 
-.stats-container h2 {
+.history-btn {
+  width: 100%;
+  margin-top: 15px;
+  background: transparent;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+}
+
+.history-btn:hover {
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+}
+
+/* 🌟 Sleek Tables */
+.stats-container h2, .graph-card h3 {
   text-align: center;
-  margin-bottom: 20px;
-  color: #00ffcc;
+  margin-bottom: 24px;
+  color: var(--text-main);
+  font-weight: 600;
 }
 
 .stats-table {
   width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 24px;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
 }
 
 .stats-table th, .stats-table td {
-  border: 1px solid #444;
-  padding: 12px;
+  padding: 16px;
   text-align: left;
+  border-bottom: 1px solid var(--card-border);
 }
 
 .stats-table th {
-  background: #2a2a40;
-  color: #fff;
+  background: rgba(15, 23, 42, 0.8);
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.stats-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-table tr:hover:not(.total-row) {
+  background: rgba(255, 255, 255, 0.04); /* Row highlight on hover */
 }
 
 .total-row {
-  font-weight: bold;
-  background: #2a2a40;
-  color: #00ffcc;
+  font-weight: 700;
+  background: rgba(0, 255, 204, 0.05);
+  color: var(--accent);
 }
 
+/* 🌟 Glowing Medals */
 .medal-section {
   text-align: center;
-  background: #2a2a40;
-  padding: 15px;
-  border-radius: 8px;
-  border: 1px solid #444;
+  background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.02));
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,215,0,0.2);
 }
 
 .medal-section h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
+  color: #ffd700;
+  text-shadow: 0 0 15px rgba(255,215,0,0.4);
 }
 
+/* Layout Management */
 .main-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 40px;
   align-items: center;
   width: 100%;
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 20px;
 }
 
 .top-section {
@@ -135,6 +232,21 @@ button {
   gap: 30px;
   justify-content: center;
   width: 100%;
+  align-items: stretch;
+}
+
+.tracker-container {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-container {
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
 }
 
 .graphs-section {
@@ -146,34 +258,30 @@ button {
 }
 
 .graph-card {
-  background: #1e1e2f;
-  padding: 20px;
-  border-radius: 12px;
   width: 100%;
-  max-width: 450px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  max-width: 500px;
 }
 
-.graph-card h3 {
-  text-align: center;
-  margin-bottom: 20px;
-  color: #00ffcc;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
-.history-btn {
-  width: 100%;
-  margin-top: 10px;
-  background: transparent;
-  color: #00ffcc;
-  border: 1px solid #00ffcc;
-  transition: 0.3s;
+/* Course List Hover Fix */
+ul li {
+  transition: all 0.2s ease;
 }
-
-.history-btn:hover {
-  background: #00ffcc;
-  color: #121212;
-}
-
-.top-section {
-  align-items: stretch;
+ul li:hover {
+  transform: translateX(5px);
+  background: rgba(255, 255, 255, 0.08) !important;
 }
