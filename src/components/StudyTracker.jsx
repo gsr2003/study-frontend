@@ -321,6 +321,68 @@ export default function StudyTracker() {
     { diamond: 0, gold: 0, silver: 0, bronze: 0 }
   );
 
+
+  // ==================== STREAK CALCULATION ====================
+const calculateStreaks = () => {
+  // Get all dates where user studied >= 30 minutes
+  const studiedDates = Object.keys(dailyData)
+    .filter(date => {
+      const totalMins = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
+      return totalMins >= 30;
+    })
+    .map(date => {
+      const [d, m, y] = date.split('/');
+      return new Date(`${y}-${m}-${d}`);
+    })
+    .sort((a, b) => a - b); // oldest to newest
+
+  if (studiedDates.length === 0) {
+    return { currentStreak: 0, longestStreak: 0 };
+  }
+
+  // Calculate Longest Streak
+  let longestStreak = 1;
+  let tempStreak = 1;
+
+  for (let i = 1; i < studiedDates.length; i++) {
+    const diff = (studiedDates[i] - studiedDates[i - 1]) / (1000 * 60 * 60 * 24);
+    if (diff === 1) {
+      tempStreak++;
+      longestStreak = Math.max(longestStreak, tempStreak);
+    } else {
+      tempStreak = 1;
+    }
+  }
+
+  // Calculate Current Streak
+  let currentStreak = 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Check if today is studied
+  const lastStudied = studiedDates[studiedDates.length - 1];
+  lastStudied.setHours(0, 0, 0, 0);
+
+  const diffFromToday = (today - lastStudied) / (1000 * 60 * 60 * 24);
+
+  if (diffFromToday === 0 || diffFromToday === 1) {
+    // Count backwards from the last studied day
+    currentStreak = 1;
+    for (let i = studiedDates.length - 2; i >= 0; i--) {
+      const diff = (studiedDates[i + 1] - studiedDates[i]) / (1000 * 60 * 60 * 24);
+      if (diff === 1) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+  }
+
+  return { currentStreak, longestStreak };
+};
+
+const { currentStreak, longestStreak } = calculateStreaks();
+
   const yearlyHours = Number((getYearlyTotalMins() / 60).toFixed(1));
 
   const filteredHistoryDates = Object.keys(dailyData)
@@ -336,6 +398,46 @@ export default function StudyTracker() {
         new Date(a.split('/').reverse().join('-'))
     );
 
+
+const exportToCSV = () => {
+  if (filteredHistoryDates.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  // CSV Header
+  let csv = 'Date,Total Time,Course Breakdown,Tasks\n';
+
+  filteredHistoryDates.forEach(date => {
+    const total = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
+    const totalFormatted = formatMinutesToHrMin(total);
+
+    // Course breakdown
+    const courses = Object.keys(dailyData[date] || {})
+      .filter(c => dailyData[date][c] > 0)
+      .map(c => `${c}: ${formatMinutesToHrMin(dailyData[date][c])}`)
+      .join(' | ');
+
+    // Tasks
+    const tasks = (completedTasksData[date] || []).join(' | ') || '—';
+
+    // Escape commas and quotes
+    const escape = (str) => `"${String(str).replace(/"/g, '""')}"`;
+
+    csv += `${escape(date)},${escape(totalFormatted)},${escape(courses)},${escape(tasks)}\n`;
+  });
+
+  // Download
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `study-history-${historyYear}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+
   // ==================== HISTORY VIEW ====================
   if (showHistory) {
     return (
@@ -344,22 +446,41 @@ export default function StudyTracker() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
             <h2 style={{ margin: 0 }}>All Time Study History</h2>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="secondary-btn" onClick={() => setShowHistory(false)}>← Back</button>
-              <button
-                onClick={() => setShowDeleteAllConfirm(true)}
-                style={{
-                  background: 'rgba(255,68,68,0.15)',
-                  color: '#ff6b6b',
-                  border: '1px solid #ff6b6b',
-                  borderRadius: '12px',
-                  padding: '10px 18px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                🗑 Delete All
-              </button>
-            </div>
+  <button className="secondary-btn" onClick={() => setShowHistory(false)}>
+    ← Back
+  </button>
+
+  <button
+    onClick={exportToCSV}
+    title="Export data in CSV format"
+    style={{
+      background: 'rgba(0, 255, 204, 0.1)',
+      color: '#00ffcc',
+      border: '1px solid #00ffcc',
+      borderRadius: '12px',
+      padding: '10px 18px',
+      fontWeight: 600,
+      cursor: 'pointer'
+    }}
+  >
+    ⬇ Export
+  </button>
+
+  <button
+    onClick={() => setShowDeleteAllConfirm(true)}
+    style={{
+      background: 'rgba(255,68,68,0.15)',
+      color: '#ff6b6b',
+      border: '1px solid #ff6b6b',
+      borderRadius: '12px',
+      padding: '10px 18px',
+      fontWeight: 600,
+      cursor: 'pointer'
+    }}
+  >
+    🗑 Delete All
+  </button>
+</div>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
@@ -547,30 +668,68 @@ export default function StudyTracker() {
           width: '100%',
           maxWidth: '480px'
         }}>
-          {/* Today's Medal */}
-          <div
-            className="stats-container medal-card"
-            onClick={() => setShowMedalModal(true)}
-            style={{ cursor: 'pointer', textAlign: 'center', padding: '32px 24px' }}
-          >
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#94a3b8', fontWeight: 500, letterSpacing: '0.5px' }}>
-              Today's Medal
-            </h3>
-            <div style={{ fontSize: '68px', margin: '8px 0 14px', lineHeight: 1 }}>
-              {medalEmoji}
-            </div>
-            <div style={{
-              fontSize: '24px',
-              fontWeight: 700,
-              marginBottom: '6px',
-              color: hasMedal
-                ? (medal === 'Diamond' ? '#b9f2ff' : medal === 'Gold' ? '#ffd700' : medal === 'Silver' ? '#e0e0e0' : '#cd7f32')
-                : '#94a3b8'
-            }}>
-              {medal}
-            </div>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Click for message</p>
-          </div>
+{/* Today's Medal + Streak */}
+<div
+  className="stats-container medal-card"
+  onClick={() => setShowMedalModal(true)}
+  style={{ cursor: 'pointer', textAlign: 'center', padding: '28px 24px' }}
+>
+  <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#94a3b8', fontWeight: 500, letterSpacing: '0.5px' }}>
+    Today's Medal
+  </h3>
+
+  <div style={{ fontSize: '60px', margin: '6px 0 10px', lineHeight: 1 }}>
+    {medalEmoji}
+  </div>
+
+  <div style={{
+    fontSize: '22px',
+    fontWeight: 700,
+    marginBottom: '16px',
+    color: hasMedal
+      ? (medal === 'Diamond' ? '#b9f2ff' : medal === 'Gold' ? '#ffd700' : medal === 'Silver' ? '#e0e0e0' : '#cd7f32')
+      : '#94a3b8'
+  }}>
+    {medal}
+  </div>
+
+  {/* ===== STREAK SECTION ===== */}
+  <div style={{
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    paddingTop: '14px',
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '28px'
+  }}>
+    <div>
+      <div style={{ fontSize: '20px', fontWeight: 700, color: '#ff6b35' }}>
+        🔥 {currentStreak}
+      </div>
+      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+        Current
+      </div>
+    </div>
+
+    <div>
+      <div style={{ fontSize: '20px', fontWeight: 700, color: '#00ffcc' }}>
+        🏆 {longestStreak}
+      </div>
+      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+        Longest
+      </div>
+    </div>
+  </div>
+
+<p style={{ 
+  margin: '12px 0 0 0', 
+  fontSize: '14px', 
+  fontWeight: 600,
+  color: '#94a3b8',
+  letterSpacing: '0.5px'
+}}>
+  Streak
+</p>
+</div>
 
           {/* Tasks */}
           <div className="stats-container" style={{ flex: 1 }}>
