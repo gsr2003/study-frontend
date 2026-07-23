@@ -3,52 +3,49 @@ import React, { useState } from 'react';
 const BACKEND_URL = 'https://my-study-backend.onrender.com/api/auth';
 
 export default function Login({ onLoginSuccess }) {
+  const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState(1); // 1 = email, 2 = otp
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const sendCode = async () => {
-    if (!email) return setMessage('Please enter your email');
-    setLoading(true);
-    setMessage('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    try {
-      const res = await fetch(`${BACKEND_URL}/send-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send code');
-
-      setMessage('OTP sent to your email!');
-      setStep(2);
-    } catch (err) {
-      setMessage(err.message);
-    } finally {
-      setLoading(false);
+    if (!email.trim() || !password.trim()) {
+      setMessage('Please fill all fields');
+      return;
     }
-  };
 
-  const verifyCode = async () => {
-    if (!otp) return setMessage('Please enter OTP');
+    if (password.length < 6) {
+      setMessage('Password must be at least 6 characters');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
 
+    const endpoint = isRegister ? '/register' : '/login';
+
     try {
-      const res = await fetch(`${BACKEND_URL}/verify-code`, {
+      const res = await fetch(`${BACKEND_URL}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Invalid OTP');
 
-      // Save token
+      if (!res.ok) {
+        throw new Error(data.error || 'Something went wrong');
+      }
+
+      // Save token + email
       localStorage.setItem('token', data.token);
       localStorage.setItem('userEmail', data.email);
 
@@ -61,75 +58,81 @@ export default function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: '#0B0F19'
-    }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#0B0F19',
+        padding: '20px',
+      }}
+    >
       <div className="stats-container" style={{ maxWidth: '420px', width: '100%' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '8px' }}>Study Tracker</h2>
+        <h2 style={{ textAlign: 'center', marginBottom: '6px' }}>Study Tracker</h2>
         <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '28px' }}>
-          Login with Email OTP
+          {isRegister ? 'Create a new account' : 'Login to your account'}
         </p>
 
-        {step === 1 ? (
-          <>
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              style={{ marginBottom: '16px' }}
-            />
-            <button
-              className="primary-btn"
-              style={{ width: '100%' }}
-              onClick={sendCode}
-              disabled={loading}
-            >
-              {loading ? 'Sending...' : 'Send Login Code'}
-            </button>
-          </>
-        ) : (
-          <>
-            <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '12px' }}>
-              Code sent to <strong>{email}</strong>
-            </p>
-            <input
-              type="text"
-              placeholder="Enter 6-digit OTP"
-              value={otp}
-              onChange={e => setOtp(e.target.value)}
-              maxLength={6}
-              style={{ marginBottom: '16px', letterSpacing: '4px', fontSize: '18px' }}
-            />
-            <button
-              className="primary-btn"
-              style={{ width: '100%', marginBottom: '12px' }}
-              onClick={verifyCode}
-              disabled={loading}
-            >
-              {loading ? 'Verifying...' : 'Verify & Login'}
-            </button>
-            <button
-              className="secondary-btn"
-              style={{ width: '100%' }}
-              onClick={() => { setStep(1); setOtp(''); setMessage(''); }}
-            >
-              Change Email
-            </button>
-          </>
-        )}
+        <form onSubmit={handleSubmit}>
+          <input
+            type="email"
+            placeholder="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{ marginBottom: '14px' }}
+          />
+
+          <input
+            type="password"
+            placeholder="Password (min 6 characters)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{ marginBottom: '18px' }}
+          />
+
+          <button
+            type="submit"
+            className="primary-btn"
+            style={{ width: '100%', marginBottom: '16px' }}
+            disabled={loading}
+          >
+            {loading
+              ? isRegister
+                ? 'Creating Account...'
+                : 'Logging in...'
+              : isRegister
+              ? 'Register'
+              : 'Login'}
+          </button>
+        </form>
+
+        <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+          {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
+          <span
+            onClick={() => {
+              setIsRegister(!isRegister);
+              setMessage('');
+            }}
+            style={{
+              color: '#00ffcc',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            {isRegister ? 'Login' : 'Register'}
+          </span>
+        </p>
 
         {message && (
-          <p style={{
-            marginTop: '18px',
-            textAlign: 'center',
-            color: message.includes('sent') || message.includes('success') ? '#00ffcc' : '#ff6b6b',
-            fontSize: '14px'
-          }}>
+          <p
+            style={{
+              marginTop: '18px',
+              textAlign: 'center',
+              color: message.includes('success') ? '#00ffcc' : '#ff6b6b',
+              fontSize: '14px',
+            }}
+          >
             {message}
           </p>
         )}
