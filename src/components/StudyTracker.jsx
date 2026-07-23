@@ -4,14 +4,15 @@ import {
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 
-const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#ff66b2', '#66ff66'];
+const PIE_COLORS = ['#6366f1', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#14b8a6'];
 
 const getTodayDate = () => new Date().toLocaleDateString('en-GB');
 
 const BACKEND_URL = 'https://my-study-backend.onrender.com/api/study-data';
+// Local: 'http://localhost:500/api/study-data'
+//api link: 'https://my-study-backend.onrender.com/api/study-data'
 
 export default function StudyTracker() {
-  // 🔥 Get logged-in user email
   const userEmail = localStorage.getItem('userEmail');
 
   const [coursesList, setCoursesList] = useState(() => {
@@ -47,13 +48,11 @@ export default function StudyTracker() {
 
   const availableYears = [2026, 2025, 2024, 2023, 2022];
 
-  // 🔥 Fetch only this user's data
   useEffect(() => {
     if (!userEmail) {
       setIsLoading(false);
       return;
     }
-
     fetch(`${BACKEND_URL}?email=${userEmail}`)
       .then(res => res.json())
       .then(dbData => {
@@ -84,15 +83,13 @@ export default function StudyTracker() {
     localStorage.setItem('studyTasks', JSON.stringify(currentTasks));
   }, [currentTasks]);
 
-  // 🔥 Save with email
   const saveTimeToCloud = async (courseName, minutesToAdd) => {
     if (!userEmail) return;
-
     const dateToUse = selectedDate;
     let updatedTodayData = {};
 
     setDailyData(prev => {
-      const todayData = prev[dateToUse] || {};
+      const todayData = { ...(prev[dateToUse] || {}) };
       coursesList.forEach(c => {
         if (todayData[c] === undefined) todayData[c] = 0;
       });
@@ -144,13 +141,10 @@ export default function StudyTracker() {
     }
   };
 
-  // 🔥 Complete task with email
   const handleCompleteTask = (taskText) => {
     if (!userEmail) return;
-
     const dateToUse = selectedDate;
     setCurrentTasks(prev => prev.filter(t => t !== taskText));
-
     setCompletedTasksData(prev => {
       const list = [...(prev[dateToUse] || []), taskText];
       fetch(BACKEND_URL, {
@@ -166,14 +160,10 @@ export default function StudyTracker() {
     });
   };
 
-  // 🔥 Delete only this user's data
   const handleDeleteAllData = async () => {
     if (!userEmail) return;
-
     try {
-      const res = await fetch(`${BACKEND_URL}/all?email=${userEmail}`, {
-        method: 'DELETE'
-      });
+      const res = await fetch(`${BACKEND_URL}/all?email=${userEmail}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
       setDailyData({});
       setCompletedTasksData({});
@@ -210,17 +200,9 @@ export default function StudyTracker() {
     return `${d}/${m}/${y}`;
   };
 
-  // Safety check
   if (!userEmail) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        color: '#ff6b6b',
-        fontSize: '20px'
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--danger)', fontSize: '18px' }}>
         Please login again
       </div>
     );
@@ -228,14 +210,7 @@ export default function StudyTracker() {
 
   if (isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        color: '#00ffcc',
-        fontSize: '22px'
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--text-muted)', fontSize: '18px' }}>
         Loading Dashboard...
       </div>
     );
@@ -281,21 +256,25 @@ export default function StudyTracker() {
     });
   });
 
+  // Pie in HOURS (decimals OK)
   const pieChartData = Object.keys(overallTotals)
-    .map(c => ({ name: c, value: overallTotals[c] }))
+    .map(c => ({
+      name: c,
+      value: Number((overallTotals[c] / 60).toFixed(2))
+    }))
     .filter(d => d.value > 0);
 
   const getDayColorStyle = (dateStr) => {
     const dayRecord = dailyData[dateStr];
     if (!dayRecord) {
-      return { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' };
+      return { background: 'var(--border)', border: '1px solid var(--border)' };
     }
     const hrs = Object.values(dayRecord).reduce((a, b) => a + b, 0) / 60;
-    if (hrs < 4) return { background: '#ff5555', boxShadow: '0 0 6px rgba(255,85,85,0.4)' };
-    if (hrs < 6) return { background: '#cd7f32', boxShadow: '0 0 6px rgba(205,127,50,0.4)' };
-    if (hrs < 8) return { background: '#c0c0c0', boxShadow: '0 0 6px rgba(192,192,192,0.4)' };
-    if (hrs < 10) return { background: '#ffd700', boxShadow: '0 0 8px rgba(255,215,0,0.5)' };
-    return { background: '#b9f2ff', boxShadow: '0 0 10px rgba(185,242,255,0.6)' };
+    if (hrs < 4) return { background: '#ef4444' };
+    if (hrs < 6) return { background: '#cd7f32' };
+    if (hrs < 8) return { background: '#a1a1aa' };
+    if (hrs < 10) return { background: '#eab308' };
+    return { background: '#38bdf8' };
   };
 
   const getYearlyTotalMins = () => {
@@ -321,68 +300,52 @@ export default function StudyTracker() {
     { diamond: 0, gold: 0, silver: 0, bronze: 0 }
   );
 
+  const calculateStreaks = () => {
+    const studiedDates = Object.keys(dailyData)
+      .filter(date => {
+        const totalMins = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
+        return totalMins >= 30;
+      })
+      .map(date => {
+        const [d, m, y] = date.split('/');
+        return new Date(`${y}-${m}-${d}`);
+      })
+      .sort((a, b) => a - b);
 
-  // ==================== STREAK CALCULATION ====================
-const calculateStreaks = () => {
-  // Get all dates where user studied >= 30 minutes
-  const studiedDates = Object.keys(dailyData)
-    .filter(date => {
-      const totalMins = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
-      return totalMins >= 30;
-    })
-    .map(date => {
-      const [d, m, y] = date.split('/');
-      return new Date(`${y}-${m}-${d}`);
-    })
-    .sort((a, b) => a - b); // oldest to newest
+    if (studiedDates.length === 0) return { currentStreak: 0, longestStreak: 0 };
 
-  if (studiedDates.length === 0) {
-    return { currentStreak: 0, longestStreak: 0 };
-  }
-
-  // Calculate Longest Streak
-  let longestStreak = 1;
-  let tempStreak = 1;
-
-  for (let i = 1; i < studiedDates.length; i++) {
-    const diff = (studiedDates[i] - studiedDates[i - 1]) / (1000 * 60 * 60 * 24);
-    if (diff === 1) {
-      tempStreak++;
-      longestStreak = Math.max(longestStreak, tempStreak);
-    } else {
-      tempStreak = 1;
-    }
-  }
-
-  // Calculate Current Streak
-  let currentStreak = 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Check if today is studied
-  const lastStudied = studiedDates[studiedDates.length - 1];
-  lastStudied.setHours(0, 0, 0, 0);
-
-  const diffFromToday = (today - lastStudied) / (1000 * 60 * 60 * 24);
-
-  if (diffFromToday === 0 || diffFromToday === 1) {
-    // Count backwards from the last studied day
-    currentStreak = 1;
-    for (let i = studiedDates.length - 2; i >= 0; i--) {
-      const diff = (studiedDates[i + 1] - studiedDates[i]) / (1000 * 60 * 60 * 24);
+    let longestStreak = 1;
+    let tempStreak = 1;
+    for (let i = 1; i < studiedDates.length; i++) {
+      const diff = (studiedDates[i] - studiedDates[i - 1]) / (1000 * 60 * 60 * 24);
       if (diff === 1) {
-        currentStreak++;
+        tempStreak++;
+        longestStreak = Math.max(longestStreak, tempStreak);
       } else {
-        break;
+        tempStreak = 1;
       }
     }
-  }
 
-  return { currentStreak, longestStreak };
-};
+    let currentStreak = 0;
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const lastStudied = studiedDates[studiedDates.length - 1];
+    lastStudied.setHours(0, 0, 0, 0);
+    const diffFromToday = (todayDate - lastStudied) / (1000 * 60 * 60 * 24);
 
-const { currentStreak, longestStreak } = calculateStreaks();
+    if (diffFromToday === 0 || diffFromToday === 1) {
+      currentStreak = 1;
+      for (let i = studiedDates.length - 2; i >= 0; i--) {
+        const diff = (studiedDates[i + 1] - studiedDates[i]) / (1000 * 60 * 60 * 24);
+        if (diff === 1) currentStreak++;
+        else break;
+      }
+    }
 
+    return { currentStreak, longestStreak };
+  };
+
+  const { currentStreak, longestStreak } = calculateStreaks();
   const yearlyHours = Number((getYearlyTotalMins() / 60).toFixed(1));
 
   const filteredHistoryDates = Object.keys(dailyData)
@@ -398,164 +361,137 @@ const { currentStreak, longestStreak } = calculateStreaks();
         new Date(a.split('/').reverse().join('-'))
     );
 
-
-const exportToCSV = () => {
-  if (filteredHistoryDates.length === 0) {
-    alert('No data to export');
-    return;
-  }
-
-  // CSV Header
-  let csv = 'Date,Total Time,Course Breakdown,Tasks\n';
-
-  filteredHistoryDates.forEach(date => {
-    const total = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
-    const totalFormatted = formatMinutesToHrMin(total);
-
-    // Course breakdown
-    const courses = Object.keys(dailyData[date] || {})
-      .filter(c => dailyData[date][c] > 0)
-      .map(c => `${c}: ${formatMinutesToHrMin(dailyData[date][c])}`)
-      .join(' | ');
-
-    // Tasks
-    const tasks = (completedTasksData[date] || []).join(' | ') || '—';
-
-    // Escape commas and quotes
-    const escape = (str) => `"${String(str).replace(/"/g, '""')}"`;
-
-    csv += `${escape(date)},${escape(totalFormatted)},${escape(courses)},${escape(tasks)}\n`;
-  });
-
-  // Download
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `study-history-${historyYear}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-};
-
+  const exportToCSV = () => {
+    if (filteredHistoryDates.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    let csv = 'Date,Total Time,Course Breakdown,Tasks\n';
+    filteredHistoryDates.forEach(date => {
+      const total = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
+      const totalFormatted = formatMinutesToHrMin(total);
+      const courses = Object.keys(dailyData[date] || {})
+        .filter(c => dailyData[date][c] > 0)
+        .map(c => `${c}: ${formatMinutesToHrMin(dailyData[date][c])}`)
+        .join(' | ');
+      const tasks = (completedTasksData[date] || []).join(' | ') || '—';
+      const escape = (str) => `"${String(str).replace(/"/g, '""')}"`;
+      csv += `${escape(date)},${escape(totalFormatted)},${escape(courses)},${escape(tasks)}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `study-history-${historyYear}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   // ==================== HISTORY VIEW ====================
   if (showHistory) {
     return (
       <div className="main-wrapper">
-        <div className="stats-container" style={{ width: '100%', maxWidth: '1050px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-            <h2 style={{ margin: 0 }}>All Time Study History</h2>
-            <div style={{ display: 'flex', gap: '10px' }}>
-  <button className="secondary-btn" onClick={() => setShowHistory(false)}>
-    ← Back
-  </button>
+        <div className="page-section" style={{ borderBottom: 'none' }}>
+          <div className="section-inner wide">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px' }}>All Time Study History</h2>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button className="secondary-btn" onClick={() => setShowHistory(false)}>← Back</button>
+                <button className="secondary-btn" onClick={exportToCSV} title="Export data in CSV format">⬇ Export</button>
+                <button
+                  onClick={() => setShowDeleteAllConfirm(true)}
+                  style={{
+                    background: 'transparent',
+                    color: 'var(--danger)',
+                    border: '1px solid var(--danger)',
+                    borderRadius: '10px',
+                    padding: '10px 16px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'Sora, sans-serif'
+                  }}
+                >
+                  🗑 Delete All
+                </button>
+              </div>
+            </div>
 
-  <button
-    onClick={exportToCSV}
-    title="Export data in CSV format"
-    style={{
-      background: 'rgba(0, 255, 204, 0.1)',
-      color: '#00ffcc',
-      border: '1px solid #00ffcc',
-      borderRadius: '12px',
-      padding: '10px 18px',
-      fontWeight: 600,
-      cursor: 'pointer'
-    }}
-  >
-    ⬇ Export
-  </button>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+              <select value={historyYear} onChange={e => setHistoryYear(Number(e.target.value))} style={{ width: '120px' }}>
+                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <select value={historyMonth} onChange={e => setHistoryMonth(e.target.value)} style={{ width: '150px' }}>
+                <option value="all">All Months</option>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(2025, i).toLocaleString('default', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-  <button
-    onClick={() => setShowDeleteAllConfirm(true)}
-    style={{
-      background: 'rgba(255,68,68,0.15)',
-      color: '#ff6b6b',
-      border: '1px solid #ff6b6b',
-      borderRadius: '12px',
-      padding: '10px 18px',
-      fontWeight: 600,
-      cursor: 'pointer'
-    }}
-  >
-    🗑 Delete All
-  </button>
-</div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-            <select value={historyYear} onChange={e => setHistoryYear(Number(e.target.value))} style={{ width: '130px' }}>
-              {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <select value={historyMonth} onChange={e => setHistoryMonth(e.target.value)} style={{ width: '150px' }}>
-              <option value="all">All Months</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {new Date(2025, i).toLocaleString('default', { month: 'long' })}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <table className="stats-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Total Time</th>
-                <th>Course Breakdown</th>
-                <th>Tasks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredHistoryDates.length === 0 ? (
+            <table className="stats-table">
+              <thead>
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                    No data for selected filters
-                  </td>
+                  <th>Date</th>
+                  <th>Total Time</th>
+                  <th>Course Breakdown</th>
+                  <th>Tasks</th>
                 </tr>
-              ) : (
-                filteredHistoryDates.map(date => {
-                  const total = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
-                  return (
-                    <tr key={date}>
-                      <td>{date}</td>
-                      <td className="total-row">{formatMinutesToHrMin(total)}</td>
-                      <td>
-                        {Object.keys(dailyData[date] || {}).map(c =>
-                          dailyData[date][c] > 0 ? (
-                            <div key={c} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '13px' }}>
-                              <span>{c}: {formatMinutesToHrMin(dailyData[date][c])}</span>
-                            </div>
-                          ) : null
-                        )}
-                      </td>
-                      <td style={{ fontSize: '13px', color: '#00ffcc' }}>
-                        {(completedTasksData[date] || []).join(', ') || '—'}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredHistoryDates.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      No data for selected filters
+                    </td>
+                  </tr>
+                ) : (
+                  filteredHistoryDates.map(date => {
+                    const total = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
+                    return (
+                      <tr key={date}>
+                        <td>{date}</td>
+                        <td className="total-row">{formatMinutesToHrMin(total)}</td>
+                        <td>
+                          {Object.keys(dailyData[date] || {}).map(c =>
+                            dailyData[date][c] > 0 ? (
+                              <div key={c} style={{ padding: '3px 0', fontSize: '13px' }}>
+                                {c}: {formatMinutesToHrMin(dailyData[date][c])}
+                              </div>
+                            ) : null
+                          )}
+                        </td>
+                        <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                          {(completedTasksData[date] || []).join(', ') || '—'}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {showDeleteAllConfirm && (
           <div className="modal-overlay" onClick={() => setShowDeleteAllConfirm(false)}>
             <div className="modal-box" onClick={e => e.stopPropagation()}>
-              <h3 style={{ color: '#ff6b6b', marginBottom: '12px' }}>Delete All Data?</h3>
-              <p style={{ color: '#94a3b8', marginBottom: '24px' }}>This cannot be undone.</p>
+              <h3 style={{ color: 'var(--danger)', marginBottom: '12px' }}>Delete All Data?</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>This cannot be undone.</p>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                 <button className="secondary-btn" onClick={() => setShowDeleteAllConfirm(false)}>Cancel</button>
                 <button
                   onClick={handleDeleteAllData}
                   style={{
-                    background: '#ff4444',
+                    background: 'var(--danger)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '12px',
+                    borderRadius: '10px',
                     padding: '12px 24px',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'Sora, sans-serif'
                   }}
                 >
                   Yes, Delete
@@ -571,17 +507,25 @@ const exportToCSV = () => {
   // ==================== MAIN DASHBOARD ====================
   return (
     <div className="main-wrapper">
-      <div className="top-section">
-        {/* Timer Card */}
-        <div className="tracker-container">
-          <h2>Study Dashboard</h2>
-          <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)}>
+
+      {/* ========== TIMER ========== */}
+      <section id="section-timer" className="page-section">
+        <div className="section-inner" style={{ textAlign: 'center' }}>
+          <div className="section-heading">Study Dashboard</div>
+
+          <select
+            value={selectedCourse}
+            onChange={e => setSelectedCourse(e.target.value)}
+            style={{ maxWidth: '280px', margin: '0 auto 12px', display: 'block' }}
+          >
             {coursesList.map(c => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+
           <div className="timer-display">{formatTime(time)}</div>
-          <div className="buttons">
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '28px' }}>
             <button className="primary-btn" onClick={() => setIsRunning(!isRunning)}>
               {isRunning ? 'Pause' : 'Start'}
             </button>
@@ -589,16 +533,23 @@ const exportToCSV = () => {
               Reset
             </button>
           </div>
-          <button className="save-btn" onClick={endSession}>SESSION OVER (SAVE TIME)</button>
-          <button className="history-btn" onClick={() => setShowHistory(true)}>View All Data History</button>
+
+          <button className="save-btn" style={{ maxWidth: '320px', margin: '0 auto' }} onClick={endSession}>
+            SESSION OVER (SAVE TIME)
+          </button>
+          <button className="history-btn" style={{ maxWidth: '320px', margin: '12px auto 0' }} onClick={() => setShowHistory(true)}>
+            View All Data History
+          </button>
         </div>
+      </section>
 
-        {/* Today's Progress */}
-        <div className="stats-container">
-          <h2>Today's Progress</h2>
+      {/* ========== TODAY'S PROGRESS (CENTERED) ========== */}
+      <section id="section-progress" className="page-section">
+        <div className="section-inner progress-centered">
+          <div className="section-heading">Today's Progress</div>
 
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ fontSize: '13px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>
+          <div className="date-wrap">
+            <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textAlign: 'center' }}>
               Select Date
             </label>
             <input
@@ -609,39 +560,33 @@ const exportToCSV = () => {
             />
           </div>
 
-          <table className="stats-table">
-            <thead>
-              <tr>
-                <th>Course</th>
-                <th>Time Studied</th>
-              </tr>
-            </thead>
-            <tbody>
-              {coursesList.map(course => (
-                <tr key={course}>
-                  <td>{course}</td>
-                  <td>{formatMinutesToHrMin(todayData[course] || 0)}</td>
-                </tr>
-              ))}
-              <tr className="total-row">
-                <td>Total Hrs</td>
-                <td>{formatMinutesToHrMin(totalTodayMinutes)}</td>
-              </tr>
-            </tbody>
-          </table>
+<table className="stats-table centered">
+  <thead>
+    <tr>
+      <th>Course</th>
+      <th>Time Studied</th>
+    </tr>
+  </thead>
+  <tbody>
+    {coursesList.map((course) => (
+      <tr key={course}>
+        <td>{course}</td>
+        <td>{formatMinutesToHrMin(todayData[course] || 0)}</td>
+      </tr>
+    ))}
+    <tr className="total-row">
+      <td>Total</td>
+      <td>{formatMinutesToHrMin(totalTodayMinutes)}</td>
+    </tr>
+  </tbody>
+</table>
 
-          <div style={{
-            marginTop: '22px',
-            padding: '16px',
-            background: 'rgba(0,0,0,0.25)',
-            borderRadius: '14px',
-            border: '1px solid rgba(255,255,255,0.06)'
-          }}>
-            <h4 style={{ marginBottom: '12px', color: '#00ffcc', fontSize: '13px', letterSpacing: '0.5px' }}>
+          <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border)', width: '100%', maxWidth: '480px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 600, letterSpacing: '0.5px', textAlign: 'center' }}>
               + MANUAL ENTRY
-            </h4>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <select value={manualCourse} onChange={e => setManualCourse(e.target.value)} style={{ flex: 1 }}>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <select value={manualCourse} onChange={e => setManualCourse(e.target.value)} style={{ flex: 1, minWidth: '140px' }}>
                 {coursesList.map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
@@ -651,405 +596,374 @@ const exportToCSV = () => {
                 placeholder="Mins"
                 value={manualMinutes}
                 onChange={e => setManualMinutes(e.target.value)}
-                style={{ width: '80px' }}
+                style={{ width: '90px' }}
               />
-              <button className="primary-btn" onClick={handleManualSubmit} style={{ margin: 0, padding: '10px 16px' }}>
+              <button className="primary-btn" onClick={handleManualSubmit} style={{ margin: 0 }}>
                 Add
               </button>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* RIGHT COLUMN */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '22px',
-          width: '100%',
-          maxWidth: '480px'
-        }}>
-{/* Today's Medal + Streak */}
-<div
-  className="stats-container medal-card"
-  onClick={() => setShowMedalModal(true)}
-  style={{ cursor: 'pointer', textAlign: 'center', padding: '28px 24px' }}
->
-  <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#94a3b8', fontWeight: 500, letterSpacing: '0.5px' }}>
-    Today's Medal
-  </h3>
+      {/* ========== MEDAL + TASKS ========== */}
+      <section id="section-tasks" className="page-section">
+        <div className="section-inner">
+          {/* Medal - more breathing space */}
+          <div className="medal-block" onClick={() => setShowMedalModal(true)} style={{ cursor: 'pointer' }}>
+            <div className="section-heading">Today's Medal</div>
+            <div className="medal-emoji">{medalEmoji}</div>
+            <div className="medal-title">{medal}</div>
 
-  <div style={{ fontSize: '60px', margin: '6px 0 10px', lineHeight: 1 }}>
-    {medalEmoji}
-  </div>
-
-  <div style={{
-    fontSize: '22px',
-    fontWeight: 700,
-    marginBottom: '16px',
-    color: hasMedal
-      ? (medal === 'Diamond' ? '#b9f2ff' : medal === 'Gold' ? '#ffd700' : medal === 'Silver' ? '#e0e0e0' : '#cd7f32')
-      : '#94a3b8'
-  }}>
-    {medal}
-  </div>
-
-  {/* ===== STREAK SECTION ===== */}
-  <div style={{
-    borderTop: '1px solid rgba(255,255,255,0.08)',
-    paddingTop: '14px',
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '28px'
-  }}>
-    <div>
-      <div style={{ fontSize: '20px', fontWeight: 700, color: '#ff6b35' }}>
-        🔥 {currentStreak}
-      </div>
-      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-        Current
-      </div>
-    </div>
-
-    <div>
-      <div style={{ fontSize: '20px', fontWeight: 700, color: '#00ffcc' }}>
-        🏆 {longestStreak}
-      </div>
-      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-        Longest
-      </div>
-    </div>
-  </div>
-
-<p style={{ 
-  margin: '12px 0 0 0', 
-  fontSize: '14px', 
-  fontWeight: 600,
-  color: '#94a3b8',
-  letterSpacing: '0.5px'
-}}>
-  Streak
-</p>
-</div>
+            <div className="medal-streak-row">
+              <div>
+                <div style={{ fontSize: '22px', fontWeight: 700 }}>🔥 {currentStreak}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Current</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '22px', fontWeight: 700 }}>🏆 {longestStreak}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Longest</div>
+              </div>
+            </div>
+            <p style={{ marginTop: '18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>
+              Streak
+            </p>
+          </div>
 
           {/* Tasks */}
-          <div className="stats-container" style={{ flex: 1 }}>
-            <h2>Tasks for the Day</h2>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-              <input
-                type="text"
-                value={newTaskInputStr}
-                onChange={e => setNewTaskInputStr(e.target.value)}
-                placeholder="What needs to be done?"
-                onKeyDown={e => e.key === 'Enter' && handleAddNewTask()}
-              />
-              <button className="primary-btn" style={{ margin: 0, whiteSpace: 'nowrap' }} onClick={handleAddNewTask}>
-                Add
-              </button>
-            </div>
-
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {currentTasks.map((t, idx) => (
-                <li key={idx} className="task-item">
-                  <span>{t}</span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="task-btn success" onClick={() => handleCompleteTask(t)}>✓</button>
-                    <button className="task-btn danger" onClick={() => setCurrentTasks(prev => prev.filter(x => x !== t))}>✕</button>
-                  </div>
-                </li>
-              ))}
-              {currentTasks.length === 0 && (
-                <li style={{ textAlign: 'center', color: '#94a3b8', padding: '20px 0', fontSize: '14px' }}>
-                  No pending tasks 🎉
-                </li>
-              )}
-            </ul>
-
-            {completedTasksData[today]?.length > 0 && (
-              <div style={{ marginTop: '22px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                <h4 style={{ color: '#00ffcc', marginBottom: '10px', fontSize: '13px' }}>✓ Completed</h4>
-                {completedTasksData[today].map((ct, i) => (
-                  <div key={i} style={{
-                    padding: '8px 12px',
-                    background: 'rgba(0,255,204,0.06)',
-                    borderRadius: '8px',
-                    marginBottom: '6px',
-                    color: '#94a3b8',
-                    textDecoration: 'line-through',
-                    fontSize: '13px'
-                  }}>
-                    {ct}
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="section-heading">Tasks for the Day</div>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+            <input
+              type="text"
+              value={newTaskInputStr}
+              onChange={e => setNewTaskInputStr(e.target.value)}
+              placeholder="What needs to be done?"
+              onKeyDown={e => e.key === 'Enter' && handleAddNewTask()}
+            />
+            <button className="primary-btn" style={{ margin: 0, whiteSpace: 'nowrap' }} onClick={handleAddNewTask}>
+              Add
+            </button>
           </div>
-        </div>
-      </div>
 
-      {/* ==================== HEATMAP ==================== */}
-      <div className="graph-card heatmap-card">
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          marginBottom: '22px',
-          flexWrap: 'wrap'
-        }}>
-          <select
-            className="year-select"
-            value={selectedYear}
-            onChange={e => setSelectedYear(Number(e.target.value))}
-          >
-            {availableYears.map(y => (
-              <option key={y} value={y}>{y}</option>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {currentTasks.map((t, idx) => (
+              <li key={idx} className="task-item">
+                <span>{t}</span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="task-btn success" onClick={() => handleCompleteTask(t)}>✓</button>
+                  <button className="task-btn danger" onClick={() => setCurrentTasks(prev => prev.filter(x => x !== t))}>✕</button>
+                </div>
+              </li>
             ))}
-          </select>
-
-          <button className="secondary-btn heatmap-btn">
-            Total Hrs : {yearlyHours}
-          </button>
-
-          <div style={{ position: 'relative' }}>
-            <button
-              className="primary-btn heatmap-btn"
-              onClick={() => {
-                setShowMedalsDropdown(!showMedalsDropdown);
-                setShowInfoDropdown(false);
-              }}
-            >
-              Medals ▾
-            </button>
-            {showMedalsDropdown && (
-              <div className="dropdown-panel">
-                <div className="dropdown-title">Medals Won in {selectedYear}</div>
-                <div className="medal-row"><span>💎 Diamond</span><strong>{medalCounts.diamond}</strong></div>
-                <div className="medal-row"><span>🥇 Gold</span><strong>{medalCounts.gold}</strong></div>
-                <div className="medal-row"><span>🥈 Silver</span><strong>{medalCounts.silver}</strong></div>
-                <div className="medal-row"><span>🥉 Bronze</span><strong>{medalCounts.bronze}</strong></div>
-              </div>
+            {currentTasks.length === 0 && (
+              <li style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '14px' }}>
+                No pending tasks 🎉
+              </li>
             )}
+          </ul>
+
+          {completedTasksData[today]?.length > 0 && (
+            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+              <div style={{ color: 'var(--text-muted)', marginBottom: '10px', fontSize: '12px', fontWeight: 600 }}>
+                ✓ Completed
+              </div>
+              {completedTasksData[today].map((ct, i) => (
+                <div key={i} style={{
+                  padding: '8px 0',
+                  color: 'var(--text-muted)',
+                  textDecoration: 'line-through',
+                  fontSize: '13px',
+                  borderBottom: '1px solid var(--border)'
+                }}>
+                  {ct}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ========== HEATMAP ========== */}
+      <section id="section-heatmap" className="page-section">
+        <div className="section-inner wide">
+          <div className="section-heading">Heatmap</div>
+
+          <div className="heatmap-controls">
+            <select
+              className="year-select"
+              value={selectedYear}
+              onChange={e => setSelectedYear(Number(e.target.value))}
+            >
+              {availableYears.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+
+            <button className="secondary-btn heatmap-btn">
+              Total Hrs : {yearlyHours}
+            </button>
+
+            <div style={{ position: 'relative' }}>
+              <button
+                className="primary-btn heatmap-btn"
+                onClick={() => {
+                  setShowMedalsDropdown(!showMedalsDropdown);
+                  setShowInfoDropdown(false);
+                }}
+              >
+                Medals ▾
+              </button>
+              {showMedalsDropdown && (
+                <div className="dropdown-panel">
+                  <div className="dropdown-title">Medals Won in {selectedYear}</div>
+                  <div className="medal-row"><span>💎 Diamond</span><strong>{medalCounts.diamond}</strong></div>
+                  <div className="medal-row"><span>🥇 Gold</span><strong>{medalCounts.gold}</strong></div>
+                  <div className="medal-row"><span>🥈 Silver</span><strong>{medalCounts.silver}</strong></div>
+                  <div className="medal-row"><span>🥉 Bronze</span><strong>{medalCounts.bronze}</strong></div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ position: 'relative' }}>
+              <button
+                className="info-btn"
+                onClick={() => {
+                  setShowInfoDropdown(!showInfoDropdown);
+                  setShowMedalsDropdown(false);
+                }}
+                title="Color Legend"
+              >
+                ℹ️
+              </button>
+              {showInfoDropdown && (
+                <div className="dropdown-panel" style={{ minWidth: '210px' }}>
+                  <div className="dropdown-title">Color Legend</div>
+                  <div className="legend-item">
+                    <div className="legend-dot" style={{ background: 'var(--border)', border: '1px solid var(--text-muted)' }}></div>
+                    Empty
+                  </div>
+                  <div className="legend-item">
+                    <div className="legend-dot" style={{ background: '#ef4444' }}></div>
+                    &lt; 4 Hours
+                  </div>
+                  <div className="legend-item">
+                    <div className="legend-dot" style={{ background: '#cd7f32' }}></div>
+                    Bronze (4–6 hrs)
+                  </div>
+                  <div className="legend-item">
+                    <div className="legend-dot" style={{ background: '#a1a1aa' }}></div>
+                    Silver (6–8 hrs)
+                  </div>
+                  <div className="legend-item">
+                    <div className="legend-dot" style={{ background: '#eab308' }}></div>
+                    Gold (8–10 hrs)
+                  </div>
+                  <div className="legend-item">
+                    <div className="legend-dot" style={{ background: '#38bdf8' }}></div>
+                    Diamond (10+ hrs)
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div style={{ position: 'relative' }}>
-            <button
-              className="info-btn"
-              onClick={() => {
-                setShowInfoDropdown(!showInfoDropdown);
-                setShowMedalsDropdown(false);
-              }}
-              title="Color Legend"
-            >
-              ℹ️
-            </button>
-            {showInfoDropdown && (
-              <div className="dropdown-panel" style={{ minWidth: '220px' }}>
-                <div className="dropdown-title">Color Legend</div>
-                <div className="legend-item">
-                  <div className="legend-dot" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.15)' }}></div>
-                  Empty (no study)
+          <div className="heatmap-card">
+            {(() => {
+              const year = selectedYear;
+              const firstDay = new Date(year, 0, 1);
+              const lastDay = new Date(year, 11, 31);
+              const start = new Date(firstDay);
+              start.setDate(start.getDate() - start.getDay());
+
+              const weeks = [];
+              let current = new Date(start);
+              while (current <= lastDay || current.getDay() !== 0) {
+                const week = [];
+                for (let i = 0; i < 7; i++) {
+                  week.push(new Date(current));
+                  current.setDate(current.getDate() + 1);
+                }
+                weeks.push(week);
+                if (current > lastDay && current.getDay() === 0) break;
+              }
+
+              const monthLabels = [];
+              let lastMonth = -1;
+              weeks.forEach((week, weekIndex) => {
+                week.forEach(day => {
+                  if (day.getFullYear() === year) {
+                    const m = day.getMonth();
+                    if (m !== lastMonth) {
+                      monthLabels.push({
+                        month: day.toLocaleString('en-US', { month: 'short' }),
+                        weekIndex
+                      });
+                      lastMonth = m;
+                    }
+                  }
+                });
+              });
+
+              return (
+                <div style={{ overflowX: 'auto', paddingBottom: '8px', display: 'flex', justifyContent: 'center' }}>
+                  <div>
+                    <div style={{ display: 'flex', marginLeft: '28px', marginBottom: '6px', position: 'relative', height: '18px' }}>
+                      {monthLabels.map((label, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            left: `${label.weekIndex * 14}px`,
+                            fontSize: '11px',
+                            color: 'var(--text-muted)',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {label.month}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '3px' }}>
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '3px',
+                        marginRight: '6px',
+                        fontSize: '10px',
+                        color: 'var(--text-muted)',
+                        paddingTop: '2px'
+                      }}>
+                        <div style={{ height: '12px' }}></div>
+                        <div style={{ height: '12px', lineHeight: '12px' }}>Mon</div>
+                        <div style={{ height: '12px' }}></div>
+                        <div style={{ height: '12px', lineHeight: '12px' }}>Wed</div>
+                        <div style={{ height: '12px' }}></div>
+                        <div style={{ height: '12px', lineHeight: '12px' }}>Fri</div>
+                        <div style={{ height: '12px' }}></div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '3px' }}>
+                        {weeks.map((week, wIndex) => (
+                          <div key={wIndex} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            {week.map((day, dIndex) => {
+                              if (day.getFullYear() !== year) {
+                                return <div key={dIndex} style={{ width: '11px', height: '11px' }} />;
+                              }
+                              const dateStr = day.toLocaleDateString('en-GB');
+                              const style = getDayColorStyle(dateStr);
+                              const mins = dailyData[dateStr]
+                                ? Object.values(dailyData[dateStr]).reduce((a, b) => a + b, 0)
+                                : 0;
+
+                              return (
+                                <div
+                                  key={dIndex}
+                                  title={`${dateStr}: ${formatMinutesToHrMin(mins)}`}
+                                  style={{
+                                    width: '11px',
+                                    height: '11px',
+                                    borderRadius: '2px',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.15s',
+                                    ...style
+                                  }}
+                                  onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.35)')}
+                                  onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                                  onClick={() => setSelectedDate(dateStr)}
+                                />
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="legend-item">
-                  <div className="legend-dot" style={{ background: '#ff5555' }}></div>
-                  &lt; 4 Hours
-                </div>
-                <div className="legend-item">
-                  <div className="legend-dot" style={{ background: '#cd7f32' }}></div>
-                  Bronze (4–6 hrs)
-                </div>
-                <div className="legend-item">
-                  <div className="legend-dot" style={{ background: '#c0c0c0' }}></div>
-                  Silver (6–8 hrs)
-                </div>
-                <div className="legend-item">
-                  <div className="legend-dot" style={{ background: '#ffd700' }}></div>
-                  Gold (8–10 hrs)
-                </div>
-                <div className="legend-item">
-                  <div className="legend-dot" style={{ background: '#b9f2ff' }}></div>
-                  Diamond (10+ hrs)
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         </div>
+      </section>
 
-        {/* Continuous GitHub-style heatmap */}
-        {(() => {
-          const year = selectedYear;
-          const firstDay = new Date(year, 0, 1);
-          const lastDay = new Date(year, 11, 31);
-
-          const start = new Date(firstDay);
-          start.setDate(start.getDate() - start.getDay());
-
-          const weeks = [];
-          let current = new Date(start);
-
-          while (current <= lastDay || current.getDay() !== 0) {
-            const week = [];
-            for (let i = 0; i < 7; i++) {
-              week.push(new Date(current));
-              current.setDate(current.getDate() + 1);
-            }
-            weeks.push(week);
-            if (current > lastDay && current.getDay() === 0) break;
-          }
-
-          const monthLabels = [];
-          let lastMonth = -1;
-          weeks.forEach((week, weekIndex) => {
-            week.forEach(day => {
-              if (day.getFullYear() === year) {
-                const m = day.getMonth();
-                if (m !== lastMonth) {
-                  monthLabels.push({
-                    month: day.toLocaleString('en-US', { month: 'short' }),
-                    weekIndex
-                  });
-                  lastMonth = m;
-                }
-              }
-            });
-          });
-
-          return (
-            <div style={{ overflowX: 'auto', paddingBottom: '8px' }}>
-              <div style={{ display: 'flex', marginLeft: '32px', marginBottom: '6px', position: 'relative', height: '18px' }}>
-                {monthLabels.map((label, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      position: 'absolute',
-                      left: `${label.weekIndex * 15}px`,
-                      fontSize: '11px',
-                      color: '#94a3b8',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {label.month}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: '3px' }}>
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '3px',
-                  marginRight: '6px',
-                  fontSize: '10px',
-                  color: '#94a3b8',
-                  paddingTop: '2px'
-                }}>
-                  <div style={{ height: '12px' }}></div>
-                  <div style={{ height: '12px', lineHeight: '12px' }}>Mon</div>
-                  <div style={{ height: '12px' }}></div>
-                  <div style={{ height: '12px', lineHeight: '12px' }}>Wed</div>
-                  <div style={{ height: '12px' }}></div>
-                  <div style={{ height: '12px', lineHeight: '12px' }}>Fri</div>
-                  <div style={{ height: '12px' }}></div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '3px' }}>
-                  {weeks.map((week, wIndex) => (
-                    <div key={wIndex} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      {week.map((day, dIndex) => {
-                        const isCurrentYear = day.getFullYear() === year;
-                        if (!isCurrentYear) {
-                          return <div key={dIndex} style={{ width: '12px', height: '12px' }}></div>;
-                        }
-
-                        const dateStr = day.toLocaleDateString('en-GB');
-                        const style = getDayColorStyle(dateStr);
-                        const mins = dailyData[dateStr]
-                          ? Object.values(dailyData[dateStr]).reduce((a, b) => a + b, 0)
-                          : 0;
-
-                        return (
-                          <div
-                            key={dIndex}
-                            title={`${dateStr}: ${formatMinutesToHrMin(mins)}`}
-                            style={{
-                              width: '12px',
-                              height: '12px',
-                              borderRadius: '2px',
-                              cursor: 'pointer',
-                              transition: 'transform 0.15s',
-                              ...style
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.35)')}
-                            onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-                            onClick={() => setSelectedDate(dateStr)}
-                          />
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
+      {/* ========== ANALYTICS ========== */}
+      <section id="section-analytics" className="page-section" style={{ borderBottom: 'none' }}>
+        <div className="section-inner wide">
+          <div className="section-heading">Analytics</div>
+          <div className="graphs-section">
+            <div className="graph-card">
+              <h3>Daily Total Study Hours</h3>
+              <div style={{ width: '100%', height: 280 }}>
+                <ResponsiveContainer>
+                  <LineChart data={lineChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} />
+                    <YAxis stroke="var(--text-muted)" fontSize={11} />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        color: 'var(--text-main)'
+                      }}
+                    />
+                    <Line type="monotone" dataKey="hours" stroke="var(--text-main)" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
-          );
-        })()}
-      </div>
 
-      {/* Charts */}
-      <div className="graphs-section">
-        <div className="graph-card">
-          <h3>Daily Total Study Hours</h3>
-          <div style={{ width: '100%', height: 300 }}>
-            <ResponsiveContainer>
-              <LineChart data={lineChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis dataKey="date" stroke="#999" />
-                <YAxis stroke="#999" />
-                <Tooltip contentStyle={{ background: '#1e1e2f', border: '1px solid #444' }} />
-                <Line type="monotone" dataKey="hours" stroke="#00ffcc" strokeWidth={3} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="graph-card">
+              <h3>Overall Time Distribution</h3>
+              <div style={{ width: '100%', height: 280 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie data={pieChartData} cx="50%" cy="50%" outerRadius={95} dataKey="value">
+                      {pieChartData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => [`${value} hrs`, 'Time']}
+                      contentStyle={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        color: 'var(--text-main)'
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="graph-card">
-          <h3>Overall Time Distribution</h3>
-          <div style={{ width: '100%', height: 300 }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie data={pieChartData} cx="50%" cy="50%" outerRadius={100} dataKey="value">
-                  {pieChartData.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ background: '#1e1e2f', border: '1px solid #444' }} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+      </section>
 
       {/* Medal Modal */}
       {showMedalModal && (
         <div className="modal-overlay" onClick={() => setShowMedalModal(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: '72px', marginBottom: '20px' }}>{medalEmoji}</div>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>{medalEmoji}</div>
             {hasMedal ? (
               <>
                 <h2 style={{ marginBottom: '12px' }}>Congratulations!</h2>
-                <p style={{ color: '#94a3b8', lineHeight: 1.7 }}>
-                  You won the <strong style={{ color: '#00ffcc' }}>{medal}</strong> medal today.
+                <p style={{ color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                  You won the <strong style={{ color: 'var(--text-main)' }}>{medal}</strong> medal today.
                   <br />Keep it up!
                 </p>
               </>
             ) : (
               <>
                 <h2 style={{ marginBottom: '12px' }}>Keep Going! 💪</h2>
-                <p style={{ color: '#94a3b8', lineHeight: 1.7 }}>
+                <p style={{ color: 'var(--text-muted)', lineHeight: 1.7 }}>
                   You haven't earned a medal yet today.
                   <br />Study at least <strong>4 hours</strong> to unlock Bronze!
                 </p>
               </>
             )}
-            <button className="primary-btn" style={{ marginTop: '28px' }} onClick={() => setShowMedalModal(false)}>
+            <button className="primary-btn" style={{ marginTop: '24px' }} onClick={() => setShowMedalModal(false)}>
               Got it!
             </button>
           </div>

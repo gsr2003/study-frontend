@@ -30,9 +30,7 @@ export default function Login({ onLoginSuccess }) {
     try {
       const res = await fetch(`${BACKEND_URL}${endpoint}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
@@ -45,10 +43,8 @@ export default function Login({ onLoginSuccess }) {
         throw new Error(data.error || 'Something went wrong');
       }
 
-      // Save token + email
       localStorage.setItem('token', data.token);
       localStorage.setItem('userEmail', data.email);
-
       onLoginSuccess();
     } catch (err) {
       setMessage(err.message);
@@ -64,13 +60,32 @@ export default function Login({ onLoginSuccess }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0B0F19',
-        padding: '20px',
+        background: 'var(--bg-main)',
+        padding: '24px',
+        fontFamily: "'Sora', sans-serif",
       }}
     >
-      <div className="stats-container" style={{ maxWidth: '420px', width: '100%' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '6px' }}>Study Tracker</h2>
-        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '28px' }}>
+      <div style={{ width: '100%', maxWidth: '400px' }}>
+        <h1
+          style={{
+            textAlign: 'center',
+            fontSize: '24px',
+            fontWeight: 700,
+            marginBottom: '6px',
+            color: 'var(--text-main)',
+            letterSpacing: '-0.3px',
+          }}
+        >
+          Study Tracker
+        </h1>
+        <p
+          style={{
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            marginBottom: '32px',
+            fontSize: '14px',
+          }}
+        >
           {isRegister ? 'Create a new account' : 'Login to your account'}
         </p>
 
@@ -80,7 +95,7 @@ export default function Login({ onLoginSuccess }) {
             placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{ marginBottom: '14px' }}
+            style={{ marginBottom: '12px' }}
           />
 
           <input
@@ -88,13 +103,13 @@ export default function Login({ onLoginSuccess }) {
             placeholder="Password (min 6 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{ marginBottom: '18px' }}
+            style={{ marginBottom: '20px' }}
           />
 
           <button
             type="submit"
             className="primary-btn"
-            style={{ width: '100%', marginBottom: '16px' }}
+            style={{ width: '100%', marginBottom: '18px', padding: '13px' }}
             disabled={loading}
           >
             {loading
@@ -107,7 +122,13 @@ export default function Login({ onLoginSuccess }) {
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+        <p
+          style={{
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            fontSize: '13px',
+          }}
+        >
           {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
           <span
             onClick={() => {
@@ -115,9 +136,11 @@ export default function Login({ onLoginSuccess }) {
               setMessage('');
             }}
             style={{
-              color: '#00ffcc',
+              color: 'var(--text-main)',
               cursor: 'pointer',
               fontWeight: 600,
+              textDecoration: 'underline',
+              textUnderlineOffset: '3px',
             }}
           >
             {isRegister ? 'Login' : 'Register'}
@@ -129,8 +152,10 @@ export default function Login({ onLoginSuccess }) {
             style={{
               marginTop: '18px',
               textAlign: 'center',
-              color: message.includes('success') ? '#00ffcc' : '#ff6b6b',
-              fontSize: '14px',
+              color: message.toLowerCase().includes('success')
+                ? 'var(--text-main)'
+                : 'var(--danger)',
+              fontSize: '13px',
             }}
           >
             {message}

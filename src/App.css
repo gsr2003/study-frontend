@@ -1,14 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-main: #0B0F19;
-  --card-bg: rgba(26, 32, 53, 0.72);
-  --card-border: rgba(255, 255, 255, 0.07);
-  --primary: #6c63ff;
-  --primary-hover: #5a52d5;
-  --accent: #00ffcc;
-  --text-main: #f1f5f9;
-  --text-muted: #94a3b8;
+  /* Dark Theme */
+  --bg-main: #09090b;
+  --bg-secondary: #111113;
+  --text-main: #fafafa;
+  --text-muted: #a1a1aa;
+  --accent: #fafafa;
+  --primary: #fafafa;
+  --primary-hover: #e4e4e7;
+  --border: rgba(255, 255, 255, 0.08);
+  --input-bg: #18181b;
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --danger: #ef4444;
+}
+
+[data-theme="light"] {
+  --bg-main: #fafafa;
+  --bg-secondary: #ffffff;
+  --text-main: #09090b;
+  --text-muted: #71717a;
+  --accent: #09090b;
+  --primary: #09090b;
+  --primary-hover: #27272a;
+  --border: rgba(0, 0, 0, 0.08);
+  --input-bg: #f4f4f5;
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --danger: #dc2626;
 }
 
 * {
@@ -19,100 +37,333 @@
 
 body {
   background-color: var(--bg-main);
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(108, 99, 255, 0.13), transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(0, 255, 204, 0.09), transparent 50%);
   color: var(--text-main);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Sora', sans-serif;
   min-height: 100vh;
-  padding: 40px 20px;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ==================== APP LAYOUT ==================== */
+.app-layout {
+  min-height: 100vh;
   display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+}
+
+.main-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 60px;
+}
+
+/* ==================== HEADER ==================== */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  background: var(--bg-main);
+  border-bottom: 1px solid var(--border);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -0.3px;
+}
+
+.header-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.header-nav button {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Sora', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.header-nav button:hover {
+  background: var(--hover-bg);
+  color: var(--text-main);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.theme-btn,
+.profile-btn {
+  background: var(--hover-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  overflow-x: hidden; /* removes side lines */
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-/* Cards */
-.tracker-container,
-.stats-container,
-.graph-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  padding: 28px;
-  border-radius: 20px;
-  border: 1px solid var(--card-border);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+.theme-btn:hover,
+.profile-btn:hover {
+  background: var(--border);
 }
 
-.tracker-container:hover,
-.stats-container:hover,
-.graph-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+/* Hamburger */
+.hamburger-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
 }
 
-/* Timer */
-.timer-display {
-  font-size: 64px;
-  font-weight: 700;
-  margin: 28px 0;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--accent);
-  text-shadow: 0 0 20px rgba(0, 255, 204, 0.45);
-  letter-spacing: 2px;
+.hamburger-btn span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--text-main);
+  border-radius: 2px;
+}
+
+.hamburger-dropdown,
+.profile-dropdown {
+  position: absolute;
+  top: 110%;
+  min-width: 220px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  z-index: 200;
+}
+
+.hamburger-dropdown { left: 0; }
+.profile-dropdown { right: 0; }
+
+.hamburger-dropdown button,
+.dropdown-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Sora', sans-serif;
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+
+.hamburger-dropdown button:hover,
+.dropdown-item:hover {
+  background: var(--hover-bg);
+}
+
+.dropdown-item.danger {
+  color: var(--danger);
+}
+
+.profile-email-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  padding: 0 4px;
+}
+
+.profile-email {
+  font-size: 13px;
+  color: var(--text-main);
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding: 0 4px;
+  word-break: break-all;
+}
+
+/* ==================== FOOTER ==================== */
+.app-footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
+
+/* ==================== FULL WIDTH SECTIONS ==================== */
+.page-section {
+  width: 100%;
+  padding: 70px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.page-section:last-of-type {
+  border-bottom: none;
+}
+
+.section-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 32px;
   text-align: center;
 }
 
-/* Inputs */
+.section-inner {
+  width: 100%;
+  max-width: 720px;
+}
+
+.section-inner.wide {
+  max-width: 960px;
+}
+
+/* ==================== TIMER ==================== */
+.timer-display {
+  font-size: 88px;
+  font-weight: 700;
+  margin: 40px 0 36px;
+  font-family: 'Sora', sans-serif;
+  color: var(--text-main);
+  letter-spacing: 6px;
+  text-align: center;
+  line-height: 1;
+}
+
+/* ==================== PROGRESS (CENTERED) ==================== */
+.progress-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.progress-centered .stats-table {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.progress-centered .date-wrap {
+  width: 100%;
+  max-width: 240px;
+  margin-bottom: 28px;
+}
+
+/* ==================== MEDAL (BREATHING SPACE) ==================== */
+.medal-block {
+  text-align: center;
+  padding: 12px 0 48px;
+}
+
+.medal-block .medal-emoji {
+  font-size: 64px;
+  margin: 16px 0 14px;
+  line-height: 1;
+}
+
+.medal-block .medal-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 28px;
+}
+
+.medal-streak-row {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+/* ==================== INPUTS ==================== */
 select, input {
-  padding: 13px 15px;
+  padding: 12px 14px;
   font-size: 14px;
   width: 100%;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.75);
-  color: white;
-  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border);
   outline: none;
-  transition: all 0.2s ease;
-  font-family: inherit;
+  font-family: 'Sora', sans-serif;
+  transition: border-color 0.2s;
 }
 
 select:focus, input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(0, 255, 204, 0.15);
+  border-color: var(--text-muted);
 }
 
 select option {
-  background: #0B0F19;
+  background: var(--bg-secondary);
+  color: var(--text-main);
 }
 
 .date-input {
   color-scheme: dark;
-  cursor: pointer;
 }
 
-/* Buttons */
+[data-theme="light"] .date-input {
+  color-scheme: light;
+}
+
+/* ==================== BUTTONS ==================== */
 button {
-  padding: 12px 20px;
-  margin: 4px;
+  padding: 11px 18px;
   cursor: pointer;
   border: none;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 600;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-button:active {
-  transform: scale(0.97);
+  font-family: 'Sora', sans-serif;
+  transition: all 0.2s;
 }
 
 .primary-btn {
   background: var(--primary);
-  color: white;
-  box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+  color: var(--bg-main);
 }
 
 .primary-btn:hover {
@@ -120,302 +371,233 @@ button:active {
 }
 
 .secondary-btn {
-  background: rgba(255, 255, 255, 0.07);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--border);
 }
 
 .secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.13);
+  background: var(--hover-bg);
 }
 
 .save-btn {
   width: 100%;
-  margin-top: 18px;
-  background: linear-gradient(135deg, #00ffcc, #00b38f);
-  color: #000;
+  margin-top: 14px;
+  background: var(--text-main);
+  color: var(--bg-main);
   font-weight: 700;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 18px rgba(0, 255, 204, 0.3);
-}
-
-.save-btn:hover {
-  filter: brightness(1.08);
 }
 
 .history-btn {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 8px;
   background: transparent;
-  color: var(--accent);
-  border: 2px solid var(--accent);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
 }
 
 .history-btn:hover {
-  background: var(--accent);
-  color: #000;
+  color: var(--text-main);
+  border-color: var(--text-muted);
 }
 
-/* Tables */
-.stats-container h2,
-.graph-card h3 {
-  text-align: center;
-  margin-bottom: 20px;
-  font-weight: 600;
-  font-size: 17px;
-}
-
+/* ==================== TABLE ==================== */
 .stats-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--card-border);
 }
 
 .stats-table th,
 .stats-table td {
-  padding: 14px 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--card-border);
+  padding: 16px 24px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
 }
 
 .stats-table th {
-  background: rgba(15, 23, 42, 0.8);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+  background: var(--hover-bg);
 }
 
 .stats-table tr:last-child td {
   border-bottom: none;
 }
 
-.stats-table tr:hover:not(.total-row) {
-  background: rgba(255, 255, 255, 0.04);
-}
-
 .total-row {
   font-weight: 700;
-  background: rgba(0, 255, 204, 0.06);
-  color: var(--accent);
+  color: var(--text-main);
+  background: var(--hover-bg);
 }
 
-/* Medal Card */
-.medal-card {
-  transition: all 0.25s ease;
+/* Progress table - centered with side space + column gap */
+.progress-centered .stats-table {
+  max-width: 520px;
+  width: 100%;
+  margin: 0 auto;
+  table-layout: fixed;
 }
 
-.medal-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 0 30px rgba(108, 99, 255, 0.12);
+.progress-centered .stats-table th,
+.progress-centered .stats-table td {
+  width: 50%;
+  padding: 16px 28px;
+  text-align: center;
 }
 
-/* Tasks */
+.progress-centered .date-wrap {
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto 28px;
+}
+
+/* ==================== TASKS ==================== */
 .task-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 12px 14px;
-  margin-bottom: 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.2s ease;
-}
-
-.task-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateX(4px);
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
 }
 
 .task-btn {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
-  font-weight: bold;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s;
+  border: 1px solid var(--border);
+  background: transparent;
 }
 
 .task-btn.success {
-  background: rgba(0, 255, 204, 0.12);
-  color: #00ffcc;
-  border: 1px solid #00ffcc;
-}
-
-.task-btn.success:hover {
-  background: #00ffcc;
-  color: #000;
+  color: var(--text-main);
 }
 
 .task-btn.danger {
-  background: rgba(255, 68, 68, 0.12);
-  color: #ff6b6b;
-  border: 1px solid #ff6b6b;
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
-.task-btn.danger:hover {
-  background: #ff6b6b;
-  color: white;
-}
-
-/* ==================== LAYOUT ==================== */
-.main-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
-  align-items: center;
-  width: 100%;
-  max-width: 1280px;
-}
-
-.top-section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  justify-content: center;
-  width: 100%;
-  align-items: stretch;
-}
-
-.tracker-container {
-  width: 100%;
-  max-width: 360px;
-}
-
-.stats-container {
-  width: 100%;
-  max-width: 360px;
-}
-
-/* Wider Medal + Tasks */
-.top-section > div:last-child {
-  max-width: 480px !important;
-}
-
-.graphs-section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  justify-content: center;
-  width: 100%;
-}
-
-.graph-card {
-  width: 100%;
-  max-width: 560px;
-}
-
-/* ==================== HEATMAP - CENTERED ==================== */
+/* ==================== HEATMAP ==================== */
 .heatmap-card {
   width: 100%;
-  max-width: 1100px;
-  overflow-x: auto;
   display: flex;
   flex-direction: column;
-  align-items: center; /* centers the content inside the card */
+  align-items: center;
 }
 
-.heatmap-card > div:first-child {
-  width: 100%;
+.heatmap-controls {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 10px;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  width: 100%;
 }
 
 .year-select {
-  width: 110px !important;
-  padding: 10px 14px !important;
-  border-radius: 12px !important;
-  background: rgba(15, 23, 42, 0.85) !important;
-  border: 1px solid rgba(108, 99, 255, 0.35) !important;
-  color: white !important;
-  font-weight: 500;
+  width: 100px !important;
 }
 
 .heatmap-btn {
   margin: 0 !important;
-  padding: 10px 18px !important;
+  padding: 10px 16px !important;
 }
 
 .info-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 16px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
-.info-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
-}
-
-/* Dropdowns */
 .dropdown-panel {
   position: absolute;
   top: 110%;
-  left: 0;
-  z-index: 100;
-  background: rgba(26, 32, 53, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
   min-width: 200px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
 .dropdown-title {
-  font-size: 13px;
-  color: #94a3b8;
-  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
   font-weight: 500;
 }
 
 .medal-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
-  font-size: 14px;
+  padding: 5px 0;
+  font-size: 13px;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 5px 0;
-  font-size: 13px;
+  padding: 4px 0;
+  font-size: 12px;
 }
 
 .legend-dot {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border-radius: 3px;
   flex-shrink: 0;
 }
 
-/* Modal - more breathing space */
+/* ==================== GRAPHS ==================== */
+.graphs-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+  width: 100%;
+}
+
+.graph-card h3 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* ==================== MODAL ==================== */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -423,28 +605,43 @@ button:active {
 }
 
 .modal-box {
-  background: rgba(26, 32, 53, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  padding: 48px 44px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 32px;
   max-width: 400px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
 }
 
-/* Scrollbar */
+/* ==================== SCROLLBAR ==================== */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-main);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: var(--text-muted);
   border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 900px) {
+  .header-nav {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .timer-display {
+    font-size: 56px;
+    letter-spacing: 3px;
+    margin: 28px 0 28px;
+  }
+
+  .medal-streak-row {
+    gap: 32px;
+  }
 }
