@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 import CustomSelect from '../CustomSelect.jsx';
-// Agar CustomSelect src/ me hai: import CustomSelect from '../CustomSelect.jsx';
+import CustomDatePicker from '../CustomDatePicker.jsx';
 
 const PIE_COLORS = ['#6366f1', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#14b8a6'];
 
@@ -300,18 +300,6 @@ export default function StudyTracker() {
     const h = Math.floor(total / 60);
     const m = total % 60;
     return h ? `${h} Hr ${m} Min` : `${m} Min`;
-  };
-
-  const toInputDate = (gb) => {
-    if (!gb) return '';
-    const [d, m, y] = gb.split('/');
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-  };
-
-  const fromInputDate = (iso) => {
-    if (!iso) return getTodayDate();
-    const [y, m, d] = iso.split('-');
-    return `${d}/${m}/${y}`;
   };
 
   if (!userEmail) {
@@ -665,11 +653,12 @@ export default function StudyTracker() {
             <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textAlign: 'center' }}>
               Select Date
             </label>
-            <input
-              type="date"
-              className="date-input"
-              value={toInputDate(selectedDate)}
-              onChange={e => setSelectedDate(fromInputDate(e.target.value))}
+            <CustomDatePicker
+              value={selectedDate}
+              onChange={(gb) => {
+                if (gb) setSelectedDate(gb);
+                else setSelectedDate(getTodayDate());
+              }}
             />
           </div>
 
@@ -853,11 +842,11 @@ export default function StudyTracker() {
                 }}
                 title="Color Legend"
               >
-                ℹ️
+                i
               </button>
               {showInfoDropdown && (
                 <div className="dropdown-panel" style={{ minWidth: '210px' }}>
-                  <div className="dropdown-title">Color Legend</div>
+                  <div className="dropdown-title">info</div>
                   <div className="legend-item">
                     <div className="legend-dot" style={{ background: 'var(--border)', border: '1px solid var(--text-muted)' }}></div>
                     Empty
