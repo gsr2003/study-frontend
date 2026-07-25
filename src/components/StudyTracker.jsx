@@ -8,19 +8,18 @@ const PIE_COLORS = ['#6366f1', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4
 
 const getTodayDate = () => new Date().toLocaleDateString('en-GB');
 
-const BACKEND_URL = 'https://my-study-backend.onrender.com/api/study-data';
-// Local: 'http://localhost:500/api/study-data'
-//api link: 'https://my-study-backend.onrender.com/api/study-data'
+const API_BASE = 'https://my-study-backend.onrender.com/api';
+// Local: 'http://localhost:5000/api'
+const BACKEND_URL = `${API_BASE}/study-data`;
+const COURSES_URL = `${API_BASE}/courses`;
+
+const DEFAULT_COURSES = ['Communication', 'CS Fundamentals', 'DEV', 'DSA', 'Extras', 'AI'];
 
 export default function StudyTracker() {
   const userEmail = localStorage.getItem('userEmail');
 
-  const [coursesList, setCoursesList] = useState(() => {
-    const saved = localStorage.getItem('studyTrackerCourses');
-    return saved ? JSON.parse(saved) : ['Communication', 'CS Fundamentals', 'DEV', 'DSA', 'Extras', 'AI'];
-  });
-
-  const [selectedCourse, setSelectedCourse] = useState(coursesList[0] || '');
+  const [coursesList, setCoursesList] = useState(DEFAULT_COURSES);
+  const [selectedCourse, setSelectedCourse] = useState('');
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -43,30 +42,63 @@ export default function StudyTracker() {
   const [historyYear, setHistoryYear] = useState(new Date().getFullYear());
   const [historyMonth, setHistoryMonth] = useState('all');
 
-  const [manualCourse, setManualCourse] = useState(coursesList[0] || '');
+  const [manualCourse, setManualCourse] = useState('');
   const [manualMinutes, setManualMinutes] = useState('');
+
+  // Courses manage
+  const [showCoursesModal, setShowCoursesModal] = useState(false);
+  const [newCourseName, setNewCourseName] = useState('');
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingName, setEditingName] = useState('');
 
   const availableYears = [2026, 2025, 2024, 2023, 2022];
 
+  // Load study data + courses
   useEffect(() => {
     if (!userEmail) {
       setIsLoading(false);
       return;
     }
-    fetch(`${BACKEND_URL}?email=${userEmail}`)
-      .then(res => res.json())
-      .then(dbData => {
+
+    const loadAll = async () => {
+      try {
+        const [dataRes, coursesRes] = await Promise.all([
+          fetch(`${BACKEND_URL}?email=${userEmail}`),
+          fetch(`${COURSES_URL}?email=${userEmail}`)
+        ]);
+
+        const dbData = await dataRes.json();
+        const coursesJson = await coursesRes.json();
+
         const formattedData = {};
         const formattedTasks = {};
-        dbData.forEach(item => {
-          formattedData[item.date] = item.coursesData || {};
-          formattedTasks[item.date] = item.completedTasks || [];
-        });
+        if (Array.isArray(dbData)) {
+          dbData.forEach(item => {
+            formattedData[item.date] = item.coursesData || {};
+            formattedTasks[item.date] = item.completedTasks || [];
+          });
+        }
         setDailyData(formattedData);
         setCompletedTasksData(formattedTasks);
+
+        const list = (coursesJson.courses && coursesJson.courses.length > 0)
+          ? coursesJson.courses
+          : DEFAULT_COURSES;
+
+        setCoursesList(list);
+        setSelectedCourse(list[0] || '');
+        setManualCourse(list[0] || '');
+      } catch (e) {
+        console.error(e);
+        setCoursesList(DEFAULT_COURSES);
+        setSelectedCourse(DEFAULT_COURSES[0]);
+        setManualCourse(DEFAULT_COURSES[0]);
+      } finally {
         setIsLoading(false);
-      })
-      .catch(() => setIsLoading(false));
+      }
+    };
+
+    loadAll();
   }, [userEmail]);
 
   useEffect(() => {
@@ -76,12 +108,87 @@ export default function StudyTracker() {
   }, [isRunning]);
 
   useEffect(() => {
-    localStorage.setItem('studyTrackerCourses', JSON.stringify(coursesList));
-  }, [coursesList]);
-
-  useEffect(() => {
     localStorage.setItem('studyTasks', JSON.stringify(currentTasks));
   }, [currentTasks]);
+
+  // Save courses to backend
+  const saveCoursesToBackend = async (updatedList) => {
+    if (!userEmail) return;
+    try {
+      const res = await fetch(COURSES_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, courses: updatedList })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save courses');
+      return data.courses;
+    } catch (e) {
+      console.error(e);
+      alert(e.message || 'Failed to save courses');
+      return null;
+    }
+  };
+
+  const handleAddCourse = async () => {
+    const name = newCourseName.trim();
+    if (!name) return;
+    if (coursesList.some(c => c.toLowerCase() === name.toLowerCase())) {
+      alert('Course already exists');
+      return;
+    }
+    const updated = [...coursesList, name];
+    const saved = await saveCoursesToBackend(updated);
+    if (saved) {
+      setCoursesList(saved);
+      setNewCourseName('');
+      if (!selectedCourse) setSelectedCourse(saved[0]);
+      if (!manualCourse) setManualCourse(saved[0]);
+    }
+  };
+
+  const handleStartEdit = (index) => {
+    setEditingIndex(index);
+    setEditingName(coursesList[index]);
+  };
+
+  const handleSaveEdit = async () => {
+    const name = editingName.trim();
+    if (!name) return;
+    if (coursesList.some((c, i) => i !== editingIndex && c.toLowerCase() === name.toLowerCase())) {
+      alert('Course already exists');
+      return;
+    }
+
+    const oldName = coursesList[editingIndex];
+    const updated = coursesList.map((c, i) => (i === editingIndex ? name : c));
+    const saved = await saveCoursesToBackend(updated);
+    if (saved) {
+      setCoursesList(saved);
+      if (selectedCourse === oldName) setSelectedCourse(name);
+      if (manualCourse === oldName) setManualCourse(name);
+      setEditingIndex(null);
+      setEditingName('');
+    }
+  };
+
+  const handleDeleteCourse = async (index) => {
+    if (coursesList.length <= 1) {
+      alert('At least one course is required');
+      return;
+    }
+    const name = coursesList[index];
+    if (!window.confirm(`Delete "${name}"?\n\nPast study data for this course will still remain in history.`)) {
+      return;
+    }
+    const updated = coursesList.filter((_, i) => i !== index);
+    const saved = await saveCoursesToBackend(updated);
+    if (saved) {
+      setCoursesList(saved);
+      if (selectedCourse === name) setSelectedCourse(saved[0]);
+      if (manualCourse === name) setManualCourse(saved[0]);
+    }
+  };
 
   const saveTimeToCloud = async (courseName, minutesToAdd) => {
     if (!userEmail) return;
@@ -256,7 +363,6 @@ export default function StudyTracker() {
     });
   });
 
-  // Pie in HOURS (decimals OK)
   const pieChartData = Object.keys(overallTotals)
     .map(c => ({
       name: c,
@@ -543,7 +649,7 @@ export default function StudyTracker() {
         </div>
       </section>
 
-      {/* ========== TODAY'S PROGRESS (CENTERED) ========== */}
+      {/* ========== TODAY'S PROGRESS ========== */}
       <section id="section-progress" className="page-section">
         <div className="section-inner progress-centered">
           <div className="section-heading">Today's Progress</div>
@@ -560,30 +666,30 @@ export default function StudyTracker() {
             />
           </div>
 
-<table className="stats-table centered">
-  <thead>
-    <tr>
-      <th>Course</th>
-      <th>Time Studied</th>
-    </tr>
-  </thead>
-  <tbody>
-    {coursesList.map((course) => (
-      <tr key={course}>
-        <td>{course}</td>
-        <td>{formatMinutesToHrMin(todayData[course] || 0)}</td>
-      </tr>
-    ))}
-    <tr className="total-row">
-      <td>Total</td>
-      <td>{formatMinutesToHrMin(totalTodayMinutes)}</td>
-    </tr>
-  </tbody>
-</table>
+          <table className="stats-table centered">
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Time Studied</th>
+              </tr>
+            </thead>
+            <tbody>
+              {coursesList.map((course) => (
+                <tr key={course}>
+                  <td>{course}</td>
+                  <td>{formatMinutesToHrMin(todayData[course] || 0)}</td>
+                </tr>
+              ))}
+              <tr className="total-row">
+                <td>Total</td>
+                <td>{formatMinutesToHrMin(totalTodayMinutes)}</td>
+              </tr>
+            </tbody>
+          </table>
 
           <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border)', width: '100%', maxWidth: '480px' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 600, letterSpacing: '0.5px', textAlign: 'center' }}>
-              + MANUAL ENTRY
+              MANUAL ENTRY
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <select value={manualCourse} onChange={e => setManualCourse(e.target.value)} style={{ flex: 1, minWidth: '140px' }}>
@@ -603,13 +709,21 @@ export default function StudyTracker() {
               </button>
             </div>
           </div>
+
+          {/* Manage Courses button */}
+          <button
+            className="secondary-btn"
+            onClick={() => setShowCoursesModal(true)}
+            style={{ marginTop: '20px' }}
+          >
+            Manage Courses
+          </button>
         </div>
       </section>
 
       {/* ========== MEDAL + TASKS ========== */}
       <section id="section-tasks" className="page-section">
         <div className="section-inner">
-          {/* Medal - more breathing space */}
           <div className="medal-block" onClick={() => setShowMedalModal(true)} style={{ cursor: 'pointer' }}>
             <div className="section-heading">Today's Medal</div>
             <div className="medal-emoji">{medalEmoji}</div>
@@ -630,7 +744,6 @@ export default function StudyTracker() {
             </p>
           </div>
 
-          {/* Tasks */}
           <div className="section-heading">Tasks for the Day</div>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
             <input
@@ -965,6 +1078,100 @@ export default function StudyTracker() {
             )}
             <button className="primary-btn" style={{ marginTop: '24px' }} onClick={() => setShowMedalModal(false)}>
               Got it!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========== MANAGE COURSES MODAL ========== */}
+      {showCoursesModal && (
+        <div className="modal-overlay" onClick={() => { setShowCoursesModal(false); setEditingIndex(null); }}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', textAlign: 'left' }}>
+            <h3 style={{ marginBottom: '20px', textAlign: 'center' }}>Manage Courses</h3>
+
+            {/* Add new */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+              <input
+                type="text"
+                placeholder="New course name"
+                value={newCourseName}
+                onChange={e => setNewCourseName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddCourse()}
+              />
+              <button className="primary-btn" style={{ margin: 0, whiteSpace: 'nowrap' }} onClick={handleAddCourse}>
+                Add
+              </button>
+            </div>
+
+            {/* List */}
+            <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
+              {coursesList.map((course, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 0',
+                    borderBottom: '1px solid var(--border)'
+                  }}
+                >
+                  {editingIndex === index ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editingName}
+                        onChange={e => setEditingName(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveEdit()}
+                        style={{ flex: 1 }}
+                        autoFocus
+                      />
+                      <button className="primary-btn" style={{ margin: 0, padding: '8px 12px' }} onClick={handleSaveEdit}>
+                        Save
+                      </button>
+                      <button className="secondary-btn" style={{ margin: 0, padding: '8px 12px' }} onClick={() => setEditingIndex(null)}>
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ flex: 1, fontSize: '14px' }}>{course}</span>
+                      <button
+                        className="secondary-btn"
+                        style={{ margin: 0, padding: '6px 10px', fontSize: '12px' }}
+                        onClick={() => handleStartEdit(index)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        style={{
+                          margin: 0,
+                          padding: '6px 10px',
+                          fontSize: '12px',
+                          background: 'transparent',
+                          color: 'var(--danger)',
+                          border: '1px solid var(--danger)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontFamily: 'Sora, sans-serif',
+                          fontWeight: 600
+                        }}
+                        onClick={() => handleDeleteCourse(index)}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+              className="secondary-btn"
+              style={{ width: '100%', marginTop: '20px' }}
+              onClick={() => { setShowCoursesModal(false); setEditingIndex(null); }}
+            >
+              Close
             </button>
           </div>
         </div>

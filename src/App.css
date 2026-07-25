@@ -280,17 +280,26 @@ body {
 }
 
 .progress-centered .stats-table {
-  max-width: 480px;
+  max-width: 520px;
+  width: 100%;
   margin: 0 auto;
+  table-layout: fixed;
+}
+
+.progress-centered .stats-table th,
+.progress-centered .stats-table td {
+  width: 50%;
+  padding: 16px 28px;
+  text-align: center;
 }
 
 .progress-centered .date-wrap {
   width: 100%;
-  max-width: 240px;
-  margin-bottom: 28px;
+  max-width: 260px;
+  margin: 0 auto 28px;
 }
 
-/* ==================== MEDAL (BREATHING SPACE) ==================== */
+/* ==================== MEDAL ==================== */
 .medal-block {
   text-align: center;
   padding: 12px 0 48px;
@@ -435,27 +444,6 @@ button {
   font-weight: 700;
   color: var(--text-main);
   background: var(--hover-bg);
-}
-
-/* Progress table - centered with side space + column gap */
-.progress-centered .stats-table {
-  max-width: 520px;
-  width: 100%;
-  margin: 0 auto;
-  table-layout: fixed;
-}
-
-.progress-centered .stats-table th,
-.progress-centered .stats-table td {
-  width: 50%;
-  padding: 16px 28px;
-  text-align: center;
-}
-
-.progress-centered .date-wrap {
-  width: 100%;
-  max-width: 260px;
-  margin: 0 auto 28px;
 }
 
 /* ==================== TASKS ==================== */
@@ -612,6 +600,70 @@ button {
   max-width: 400px;
   width: 90%;
   text-align: center;
+}
+
+/* Courses modal specific */
+.modal-box.courses-modal {
+  max-width: 440px;
+  text-align: left;
+  padding: 32px 28px;
+}
+
+.course-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.course-row:last-child {
+  border-bottom: none;
+}
+
+.course-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.course-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.course-actions button {
+  padding: 6px 12px;
+  font-size: 12px;
+  margin: 0;
+}
+
+.btn-danger-outline {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Sora', sans-serif;
+  cursor: pointer;
+}
+
+.btn-danger-outline:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.courses-list {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.courses-add-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
 /* ==================== SCROLLBAR ==================== */
