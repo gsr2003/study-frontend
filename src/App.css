@@ -451,6 +451,7 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 14px 0;
   border-bottom: 1px solid var(--border);
   font-size: 14px;
@@ -463,10 +464,18 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   border: 1px solid var(--border);
-  background: transparent;
+  background: var(--hover-bg);
+  color: var(--text-main);
+  padding: 0;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.task-btn:hover {
+  background: var(--border);
 }
 
 .task-btn.success {
@@ -475,7 +484,11 @@ button {
 
 .task-btn.danger {
   color: var(--danger);
-  border-color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.task-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.12);
 }
 
 /* ==================== HEATMAP ==================== */
@@ -513,10 +526,20 @@ button {
   border: 1px solid var(--border);
   color: var(--text-main);
   font-size: 14px;
+  font-weight: 700;
+  font-family: 'Sora', sans-serif;
+  font-style: italic;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.info-btn:hover {
+  background: var(--border);
 }
 
 .dropdown-panel {
@@ -602,7 +625,6 @@ button {
   text-align: center;
 }
 
-/* Courses modal specific */
 .modal-box.courses-modal {
   max-width: 440px;
   text-align: left;
@@ -956,28 +978,4 @@ button {
 
 .cdp-footer-btn.primary:hover {
   background: var(--hover-bg);
-}
-
-.info-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: var(--hover-bg);
-  border: 1px solid var(--border);
-  color: var(--text-main);
-  font-size: 14px;
-  font-weight: 700;
-  font-family: 'Sora', sans-serif;
-  font-style: italic;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 0;
-  line-height: 1;
-}
-
-.info-btn:hover {
-  background: var(--border);
 }

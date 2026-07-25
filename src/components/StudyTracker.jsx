@@ -28,11 +28,11 @@ export default function StudyTracker() {
 
   const [dailyData, setDailyData] = useState({});
   const [completedTasksData, setCompletedTasksData] = useState({});
-  const [currentTasks, setCurrentTasks] = useState(() => {
-    const saved = localStorage.getItem('studyTasks');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [pendingTasksData, setPendingTasksData] = useState({});
+
   const [newTaskInputStr, setNewTaskInputStr] = useState('');
+  const [editingTaskIndex, setEditingTaskIndex] = useState(null);
+  const [editingTaskText, setEditingTaskText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -62,6 +62,7 @@ export default function StudyTracker() {
     }))
   ];
 
+  // ---- Load study data + courses ----
   useEffect(() => {
     if (!userEmail) {
       setIsLoading(false);
@@ -79,15 +80,20 @@ export default function StudyTracker() {
         const coursesJson = await coursesRes.json();
 
         const formattedData = {};
-        const formattedTasks = {};
+        const formattedCompleted = {};
+        const formattedPending = {};
+
         if (Array.isArray(dbData)) {
           dbData.forEach(item => {
             formattedData[item.date] = item.coursesData || {};
-            formattedTasks[item.date] = item.completedTasks || [];
+            formattedCompleted[item.date] = item.completedTasks || [];
+            formattedPending[item.date] = item.pendingTasks || [];
           });
         }
+
         setDailyData(formattedData);
-        setCompletedTasksData(formattedTasks);
+        setCompletedTasksData(formattedCompleted);
+        setPendingTasksData(formattedPending);
 
         const list = (coursesJson.courses && coursesJson.courses.length > 0)
           ? coursesJson.courses
@@ -115,9 +121,30 @@ export default function StudyTracker() {
     return () => clearInterval(timer);
   }, [isRunning]);
 
+  // Reset edit mode when date changes
   useEffect(() => {
-    localStorage.setItem('studyTasks', JSON.stringify(currentTasks));
-  }, [currentTasks]);
+    setEditingTaskIndex(null);
+    setEditingTaskText('');
+  }, [selectedDate]);
+
+  // ---- Helpers ----
+  const saveTasksToCloud = async (date, pending, completed) => {
+    if (!userEmail) return;
+    try {
+      await fetch(BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          date,
+          pendingTasks: pending,
+          completedTasks: completed
+        })
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const saveCoursesToBackend = async (updatedList) => {
     if (!userEmail) return;
@@ -137,6 +164,7 @@ export default function StudyTracker() {
     }
   };
 
+  // ---- Courses ----
   const handleAddCourse = async () => {
     const name = newCourseName.trim();
     if (!name) return;
@@ -166,7 +194,6 @@ export default function StudyTracker() {
       alert('Course already exists');
       return;
     }
-
     const oldName = coursesList[editingIndex];
     const updated = coursesList.map((c, i) => (i === editingIndex ? name : c));
     const saved = await saveCoursesToBackend(updated);
@@ -197,6 +224,7 @@ export default function StudyTracker() {
     }
   };
 
+  // ---- Time ----
   const saveTimeToCloud = async (courseName, minutesToAdd) => {
     if (!userEmail) return;
     const dateToUse = selectedDate;
@@ -248,30 +276,64 @@ export default function StudyTracker() {
     setManualMinutes('');
   };
 
-  const handleAddNewTask = () => {
-    if (newTaskInputStr.trim()) {
-      setCurrentTasks([...currentTasks, newTaskInputStr.trim()]);
-      setNewTaskInputStr('');
-    }
+  // ---- Tasks (DB synced) ----
+  const currentPending = pendingTasksData[selectedDate] || [];
+  const currentCompleted = completedTasksData[selectedDate] || [];
+
+  const handleAddNewTask = async () => {
+    const text = newTaskInputStr.trim();
+    if (!text || !userEmail) return;
+
+    const updated = [...currentPending, text];
+    setPendingTasksData(prev => ({ ...prev, [selectedDate]: updated }));
+    setNewTaskInputStr('');
+    await saveTasksToCloud(selectedDate, updated, currentCompleted);
   };
 
-  const handleCompleteTask = (taskText) => {
+  const handleCompleteTask = async (taskText) => {
     if (!userEmail) return;
-    const dateToUse = selectedDate;
-    setCurrentTasks(prev => prev.filter(t => t !== taskText));
-    setCompletedTasksData(prev => {
-      const list = [...(prev[dateToUse] || []), taskText];
-      fetch(BACKEND_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userEmail,
-          date: dateToUse,
-          completedTasks: list
-        })
-      });
-      return { ...prev, [dateToUse]: list };
-    });
+
+    const updatedPending = currentPending.filter(t => t !== taskText);
+    const updatedCompleted = [...currentCompleted, taskText];
+
+    setPendingTasksData(prev => ({ ...prev, [selectedDate]: updatedPending }));
+    setCompletedTasksData(prev => ({ ...prev, [selectedDate]: updatedCompleted }));
+
+    await saveTasksToCloud(selectedDate, updatedPending, updatedCompleted);
+  };
+
+  const handleDeletePendingTask = async (taskText) => {
+    if (!userEmail) return;
+
+    const updatedPending = currentPending.filter(t => t !== taskText);
+    setPendingTasksData(prev => ({ ...prev, [selectedDate]: updatedPending }));
+    setEditingTaskIndex(null);
+    await saveTasksToCloud(selectedDate, updatedPending, currentCompleted);
+  };
+
+  const handleStartEditTask = (index) => {
+    setEditingTaskIndex(index);
+    setEditingTaskText(currentPending[index]);
+  };
+
+  const handleSaveEditTask = async () => {
+    const text = editingTaskText.trim();
+    if (!text || editingTaskIndex === null || !userEmail) return;
+
+    const updatedPending = currentPending.map((t, i) =>
+      i === editingTaskIndex ? text : t
+    );
+    setPendingTasksData(prev => ({ ...prev, [selectedDate]: updatedPending }));
+    setEditingTaskIndex(null);
+    setEditingTaskText('');
+    await saveTasksToCloud(selectedDate, updatedPending, currentCompleted);
+  };
+
+  const handleDeleteCompletedTask = async (taskText) => {
+    if (!userEmail) return;
+    const updatedCompleted = currentCompleted.filter(t => t !== taskText);
+    setCompletedTasksData(prev => ({ ...prev, [selectedDate]: updatedCompleted }));
+    await saveTasksToCloud(selectedDate, currentPending, updatedCompleted);
   };
 
   const handleDeleteAllData = async () => {
@@ -281,6 +343,7 @@ export default function StudyTracker() {
       if (!res.ok) throw new Error('Delete failed');
       setDailyData({});
       setCompletedTasksData({});
+      setPendingTasksData({});
       setShowDeleteAllConfirm(false);
       alert('All study data deleted successfully!');
     } catch (e) {
@@ -462,13 +525,33 @@ export default function StudyTracker() {
         new Date(a.split('/').reverse().join('-'))
     );
 
+  // Also include dates that only have tasks
+  const allHistoryDates = Array.from(
+    new Set([
+      ...Object.keys(dailyData),
+      ...Object.keys(completedTasksData),
+      ...Object.keys(pendingTasksData)
+    ])
+  )
+    .filter(date => {
+      const [, m, y] = date.split('/');
+      if (parseInt(y) !== historyYear) return false;
+      if (historyMonth !== 'all' && parseInt(m) !== parseInt(historyMonth)) return false;
+      return true;
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.split('/').reverse().join('-')) -
+        new Date(a.split('/').reverse().join('-'))
+    );
+
   const exportToCSV = () => {
-    if (filteredHistoryDates.length === 0) {
+    if (allHistoryDates.length === 0) {
       alert('No data to export');
       return;
     }
     let csv = 'Date,Total Time,Course Breakdown,Tasks\n';
-    filteredHistoryDates.forEach(date => {
+    allHistoryDates.forEach(date => {
       const total = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
       const totalFormatted = formatMinutesToHrMin(total);
       const courses = Object.keys(dailyData[date] || {})
@@ -542,15 +625,16 @@ export default function StudyTracker() {
                 </tr>
               </thead>
               <tbody>
-                {filteredHistoryDates.length === 0 ? (
+                {allHistoryDates.length === 0 ? (
                   <tr>
                     <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                       No data for selected filters
                     </td>
                   </tr>
                 ) : (
-                  filteredHistoryDates.map(date => {
+                  allHistoryDates.map(date => {
                     const total = Object.values(dailyData[date] || {}).reduce((a, b) => a + b, 0);
+                    const tasks = completedTasksData[date] || [];
                     return (
                       <tr key={date}>
                         <td>{date}</td>
@@ -563,9 +647,20 @@ export default function StudyTracker() {
                               </div>
                             ) : null
                           )}
+                          {Object.keys(dailyData[date] || {}).every(c => !dailyData[date][c]) && (
+                            <span style={{ color: 'var(--text-muted)' }}>—</span>
+                          )}
                         </td>
-                        <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                          {(completedTasksData[date] || []).join(', ') || '—'}
+                        <td style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'left' }}>
+                          {tasks.length === 0 ? (
+                            '—'
+                          ) : (
+                            <ul style={{ margin: 0, paddingLeft: '18px', listStyleType: 'disc' }}>
+                              {tasks.map((t, i) => (
+                                <li key={i} style={{ marginBottom: '4px', color: 'var(--text-main)' }}>{t}</li>
+                              ))}
+                            </ul>
+                          )}
                         </td>
                       </tr>
                     );
@@ -757,36 +852,61 @@ export default function StudyTracker() {
           </div>
 
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {currentTasks.map((t, idx) => (
+            {currentPending.map((t, idx) => (
               <li key={idx} className="task-item">
-                <span>{t}</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="task-btn success" onClick={() => handleCompleteTask(t)}>✓</button>
-                  <button className="task-btn danger" onClick={() => setCurrentTasks(prev => prev.filter(x => x !== t))}>✕</button>
-                </div>
+                {editingTaskIndex === idx ? (
+                  <>
+                    <input
+                      type="text"
+                      value={editingTaskText}
+                      onChange={e => setEditingTaskText(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSaveEditTask()}
+                      style={{ flex: 1, marginRight: '8px' }}
+                      autoFocus
+                    />
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button className="task-btn success" onClick={handleSaveEditTask} title="Save">✓</button>
+                      <button className="task-btn" onClick={() => setEditingTaskIndex(null)} title="Cancel">✕</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ flex: 1 }}>{t}</span>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button className="task-btn success" onClick={() => handleCompleteTask(t)} title="Complete">✓</button>
+                      <button className="task-btn" onClick={() => handleStartEditTask(idx)} title="Edit">✎</button>
+                      <button className="task-btn danger" onClick={() => handleDeletePendingTask(t)} title="Delete">✕</button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
-            {currentTasks.length === 0 && (
+            {currentPending.length === 0 && (
               <li style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '14px' }}>
-                No pending tasks 🎉
+                No pending tasks
               </li>
             )}
           </ul>
 
-          {completedTasksData[today]?.length > 0 && (
+          {currentCompleted.length > 0 && (
             <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
               <div style={{ color: 'var(--text-muted)', marginBottom: '10px', fontSize: '12px', fontWeight: 600 }}>
                 ✓ Completed
               </div>
-              {completedTasksData[today].map((ct, i) => (
-                <div key={i} style={{
-                  padding: '8px 0',
-                  color: 'var(--text-muted)',
-                  textDecoration: 'line-through',
-                  fontSize: '13px',
-                  borderBottom: '1px solid var(--border)'
-                }}>
-                  {ct}
+              {currentCompleted.map((ct, i) => (
+                <div
+                  key={i}
+                  className="task-item"
+                  style={{ opacity: 0.7 }}
+                >
+                  <span style={{ textDecoration: 'line-through', flex: 1 }}>{ct}</span>
+                  <button
+                    className="task-btn danger"
+                    onClick={() => handleDeleteCompletedTask(ct)}
+                    title="Remove"
+                  >
+                    ✕
+                  </button>
                 </div>
               ))}
             </div>
@@ -846,7 +966,7 @@ export default function StudyTracker() {
               </button>
               {showInfoDropdown && (
                 <div className="dropdown-panel" style={{ minWidth: '210px' }}>
-                  <div className="dropdown-title">info</div>
+                  <div className="dropdown-title">Color Legend</div>
                   <div className="legend-item">
                     <div className="legend-dot" style={{ background: 'var(--border)', border: '1px solid var(--text-muted)' }}></div>
                     Empty
