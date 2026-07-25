@@ -3,6 +3,8 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
+import CustomSelect from '../CustomSelect.jsx';
+// Agar CustomSelect src/ me hai: import CustomSelect from '../CustomSelect.jsx';
 
 const PIE_COLORS = ['#6366f1', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#14b8a6'];
 
@@ -45,7 +47,6 @@ export default function StudyTracker() {
   const [manualCourse, setManualCourse] = useState('');
   const [manualMinutes, setManualMinutes] = useState('');
 
-  // Courses manage
   const [showCoursesModal, setShowCoursesModal] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
   const [editingIndex, setEditingIndex] = useState(null);
@@ -53,7 +54,14 @@ export default function StudyTracker() {
 
   const availableYears = [2026, 2025, 2024, 2023, 2022];
 
-  // Load study data + courses
+  const monthOptions = [
+    { value: 'all', label: 'All Months' },
+    ...Array.from({ length: 12 }, (_, i) => ({
+      value: i + 1,
+      label: new Date(2025, i).toLocaleString('default', { month: 'long' })
+    }))
+  ];
+
   useEffect(() => {
     if (!userEmail) {
       setIsLoading(false);
@@ -111,7 +119,6 @@ export default function StudyTracker() {
     localStorage.setItem('studyTasks', JSON.stringify(currentTasks));
   }, [currentTasks]);
 
-  // Save courses to backend
   const saveCoursesToBackend = async (updatedList) => {
     if (!userEmail) return;
     try {
@@ -522,18 +529,19 @@ export default function StudyTracker() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-              <select value={historyYear} onChange={e => setHistoryYear(Number(e.target.value))} style={{ width: '120px' }}>
-                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <select value={historyMonth} onChange={e => setHistoryMonth(e.target.value)} style={{ width: '150px' }}>
-                <option value="all">All Months</option>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {new Date(2025, i).toLocaleString('default', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', maxWidth: '340px' }}>
+              <CustomSelect
+                value={historyYear}
+                options={availableYears}
+                onChange={(v) => setHistoryYear(Number(v))}
+                style={{ width: '120px' }}
+              />
+              <CustomSelect
+                value={historyMonth}
+                options={monthOptions}
+                onChange={(v) => setHistoryMonth(v === 'all' ? 'all' : Number(v))}
+                style={{ width: '170px' }}
+              />
             </div>
 
             <table className="stats-table">
@@ -619,15 +627,14 @@ export default function StudyTracker() {
         <div className="section-inner" style={{ textAlign: 'center' }}>
           <div className="section-heading">Study Dashboard</div>
 
-          <select
-            value={selectedCourse}
-            onChange={e => setSelectedCourse(e.target.value)}
-            style={{ maxWidth: '280px', margin: '0 auto 12px', display: 'block' }}
-          >
-            {coursesList.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <div style={{ maxWidth: '280px', margin: '0 auto 12px' }}>
+            <CustomSelect
+              value={selectedCourse}
+              options={coursesList}
+              onChange={setSelectedCourse}
+              placeholder="Select course"
+            />
+          </div>
 
           <div className="timer-display">{formatTime(time)}</div>
 
@@ -691,12 +698,15 @@ export default function StudyTracker() {
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 600, letterSpacing: '0.5px', textAlign: 'center' }}>
               MANUAL ENTRY
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <select value={manualCourse} onChange={e => setManualCourse(e.target.value)} style={{ flex: 1, minWidth: '140px' }}>
-                {coursesList.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
+              <div style={{ flex: 1, minWidth: '140px' }}>
+                <CustomSelect
+                  value={manualCourse}
+                  options={coursesList}
+                  onChange={setManualCourse}
+                  placeholder="Course"
+                />
+              </div>
               <input
                 type="number"
                 placeholder="Mins"
@@ -710,7 +720,6 @@ export default function StudyTracker() {
             </div>
           </div>
 
-          {/* Manage Courses button */}
           <button
             className="secondary-btn"
             onClick={() => setShowCoursesModal(true)}
@@ -802,15 +811,13 @@ export default function StudyTracker() {
           <div className="section-heading">Heatmap</div>
 
           <div className="heatmap-controls">
-            <select
-              className="year-select"
-              value={selectedYear}
-              onChange={e => setSelectedYear(Number(e.target.value))}
-            >
-              {availableYears.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+            <div style={{ width: '110px' }}>
+              <CustomSelect
+                value={selectedYear}
+                options={availableYears}
+                onChange={(v) => setSelectedYear(Number(v))}
+              />
+            </div>
 
             <button className="secondary-btn heatmap-btn">
               Total Hrs : {yearlyHours}
@@ -1089,7 +1096,6 @@ export default function StudyTracker() {
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', textAlign: 'left' }}>
             <h3 style={{ marginBottom: '20px', textAlign: 'center' }}>Manage Courses</h3>
 
-            {/* Add new */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input
                 type="text"
@@ -1103,7 +1109,6 @@ export default function StudyTracker() {
               </button>
             </div>
 
-            {/* List */}
             <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
               {coursesList.map((course, index) => (
                 <div
